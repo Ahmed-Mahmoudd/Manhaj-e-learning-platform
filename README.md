@@ -56,7 +56,7 @@ MANHAJ follows a **modular monolith architecture**.
 
 The Laravel application is responsible for the core platform.
 
-The AI service is an external FastAPI service responsible for AI/ML functionality.
+The AI service is an external FastAPI service responsible for AI and machine-learning functionality.
 
 ---
 
@@ -126,7 +126,7 @@ Platform
 
 Tenant-owned data is isolated using `tenant_id`.
 
-The platform does not use database-per-tenant architecture.
+The platform does not use a database-per-tenant architecture.
 
 ---
 
@@ -258,7 +258,7 @@ The grading system supports:
 * Transcripts
 * Grade publishing
 
-Grade calculations are implemented in dedicated business logic/services rather than inside controllers or frontend components.
+Grade calculations are implemented in dedicated business logic and services rather than inside controllers or frontend components.
 
 Students only see grades after they have been published.
 
@@ -350,7 +350,7 @@ POST /v1/similarity/check
 POST /v1/quiz/item-analysis
 ```
 
-The AI/ML implementation itself is handled separately.
+The AI and machine-learning implementation is handled separately from the Laravel application.
 
 Laravel is responsible for:
 
@@ -388,7 +388,7 @@ Events contain information such as:
 * JSON payload
 * Timestamp
 
-These events can later be consumed by the AI/analytics system.
+These events can later be consumed by the AI and analytics systems.
 
 ---
 
@@ -398,7 +398,7 @@ The platform uses:
 
 * Authentication
 * Role-based authorization
-* Laravel Policies/Gates
+* Laravel Policies and Gates
 * Protected routes
 * Tenant isolation
 * Request validation
@@ -618,7 +618,11 @@ Start Vite:
 npm run dev
 ```
 
-The application will then be available through the Laravel development server.
+The Laravel development server will be available at:
+
+```text
+http://127.0.0.1:8000
+```
 
 ---
 
@@ -644,7 +648,7 @@ Commit
 Push
 ```
 
-A feature is not considered complete until it has been verified.
+A feature is not considered complete until it has been implemented, tested, and verified.
 
 ---
 
@@ -688,7 +692,7 @@ It records:
 ## Phase 1 — Academic Core
 
 * Tenancy
-* Roles & permissions
+* Roles and permissions
 * Academic hierarchy
 * Terms
 * Courses
@@ -698,7 +702,7 @@ It records:
 * Bulk import
 * Learning content
 * Progress tracking
-* Student/instructor interfaces
+* Student and instructor interfaces
 * Demo data
 
 ## Phase 2 — Assessment & Grades
@@ -759,22 +763,22 @@ Docker Compose will be introduced after the core application is stable.
 
 # 🤝 Development Team
 
-MANHAJ is developed as a collaborative internship project.
+MANHAJ is developed as a collaborative software project.
 
-### Full Stack Developer Intern
+### Full Stack Development
 
 Responsible for:
 
 * Laravel
 * React
 * MySQL
-* APIs
+* REST APIs
 * Academic platform
-* Authorization
+* Authentication and authorization
 * Testing
-* AI integration
+* AI service integration
 
-### Data Science / AI Intern
+### Data Science & AI
 
 Responsible for:
 
@@ -784,8 +788,14 @@ Responsible for:
 * Feature engineering
 * RAG
 * Embeddings
-* Similarity
+* Similarity analysis
 * Model evaluation
+
+---
+
+# 📄 License
+
+License and distribution terms are to be determined.
 
 ```
 ```
