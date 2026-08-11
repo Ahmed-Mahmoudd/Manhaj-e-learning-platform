@@ -14,7 +14,7 @@ class CourseFactory extends Factory
     public function definition(): array
     {
         return [
-            'tenant_id'     => fn(array $attrs) => Department::find($attrs['department_id'])->tenant_id,
+            'tenant_id'     => null, // must be supplied explicitly
             'department_id' => Department::factory(),
             'code'          => strtoupper($this->faker->lexify('??') . $this->faker->numberBetween(100, 499)),
             'title_en'      => $this->faker->randomElement([

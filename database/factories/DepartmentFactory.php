@@ -25,7 +25,7 @@ class DepartmentFactory extends Factory
         $pick = $this->faker->randomElement($names);
 
         return [
-            'tenant_id'  => fn(array $attrs) => Faculty::find($attrs['faculty_id'])->tenant_id,
+            'tenant_id'  => null, // must be supplied explicitly in tests
             'faculty_id' => Faculty::factory(),
             'name_en'    => $pick['en'],
             'name_ar'    => $pick['ar'],

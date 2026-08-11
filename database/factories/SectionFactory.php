@@ -16,7 +16,7 @@ class SectionFactory extends Factory
     public function definition(): array
     {
         return [
-            'tenant_id'        => fn(array $attrs) => Course::find($attrs['course_id'])->tenant_id,
+            'tenant_id'        => null, // must be supplied explicitly
             'course_id'        => Course::factory(),
             'academic_term_id' => AcademicTerm::factory(),
             'instructor_id'    => User::factory()->instructor(),

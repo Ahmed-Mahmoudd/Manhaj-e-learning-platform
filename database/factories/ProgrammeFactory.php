@@ -14,7 +14,7 @@ class ProgrammeFactory extends Factory
     public function definition(): array
     {
         return [
-            'tenant_id'      => fn(array $attrs) => Department::find($attrs['department_id'])->tenant_id,
+            'tenant_id'      => null, // must be supplied explicitly
             'department_id'  => Department::factory(),
             'name_en'        => $this->faker->randomElement([
                 'Bachelor of Computer Science',
