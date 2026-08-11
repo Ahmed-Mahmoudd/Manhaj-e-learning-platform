@@ -64,6 +64,11 @@ class Section extends Model
         return $this->hasMany(GradeItem::class)->orderBy('order');
     }
 
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(Announcement::class)->latest('published_at');
+    }
+
     // ─── Business helpers ─────────────────────────────────────────────────────
 
     public function enrolledCount(): int

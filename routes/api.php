@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Instructor\AnnouncementController as InstructorAnnouncementController;
 use App\Http\Controllers\Api\V1\Instructor\GradeController;
 use App\Http\Controllers\Api\V1\Instructor\InstructorDashboardController;
+use App\Http\Controllers\Api\V1\Student\StudentAnnouncementController;
 use App\Http\Controllers\Api\V1\Student\StudentDashboardController;
 use App\Http\Controllers\Api\V1\Student\StudentGradeController;
 use Illuminate\Support\Facades\Route;
@@ -46,6 +48,8 @@ Route::prefix('v1')->group(function () {
                 Route::get('sections/{section}/lessons',      [StudentDashboardController::class, 'sectionLessons']);
                 Route::post('lessons/{lesson}/progress',      [StudentDashboardController::class, 'updateProgress']);
                 Route::get('grades',                          [StudentGradeController::class, 'myGrades']);
+                Route::get('announcements',                   [StudentAnnouncementController::class, 'index']);
+                Route::post('announcements/{announcement}/read', [StudentAnnouncementController::class, 'markRead']);
             });
 
             // Instructor / TA dashboard
@@ -61,6 +65,10 @@ Route::prefix('v1')->group(function () {
                      Route::post('grade-items/{item}/grades/{student}',        [GradeController::class, 'enterGrade']);
                      Route::get('grade-items/{item}/grades',                   [GradeController::class, 'grades']);
                      Route::post('grade-items/{item}/publish',                 [GradeController::class, 'publish']);
+                     // Announcements
+                     Route::get('sections/{section}/announcements',            [InstructorAnnouncementController::class, 'index']);
+                     Route::post('sections/{section}/announcements',           [InstructorAnnouncementController::class, 'store']);
+                     Route::post('announcements/{announcement}/publish',       [InstructorAnnouncementController::class, 'publish']);
                  });
 
         });
