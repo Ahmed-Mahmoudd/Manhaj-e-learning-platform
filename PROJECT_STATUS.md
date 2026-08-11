@@ -4,36 +4,49 @@
 **PHASE 1 — ACADEMIC CORE**
 
 ## Current Feature
-Roles / Permissions (next)
+Content (Modules & Lessons) — next
 
 ---
 
 ## Completed
 
-### Phase 0 — Foundation
-- [x] Laravel 12.65.0 verified
-- [x] PHP 8.2.12 verified
-- [x] Composer dependencies installed
-- [x] MySQL via XAMPP connected (DB: manhaj)
-- [x] `.env` configured correctly
-- [x] Default migrations ran (users, cache, jobs/sessions)
-- [x] Git initialized in project root
-- [x] Initial test suite passing
-- [x] APP_NAME = MANHAJ
-- [x] PROJECT_STATUS.md created
+### Phase 0 — Foundation ✅
+- Laravel 12.65.0, PHP 8.2.12, MySQL via XAMPP
+- Git initialized, GitHub remote: https://github.com/Ahmed-Mahmoudd/Manhaj-e-learning-platform
+- Initial test suite passing
 
 ### Phase 1 — Academic Core
-- [x] **Tenancy** — `tenants` table + `Tenant` model
-- [x] `tenant_id` added to `users` (nullable FK)
-- [x] `TenantContext` service (current-tenant holder)
-- [x] `BelongsToTenant` trait (global scope + auto-fill + forTenant())
-- [x] `TenantFactory` + `UserFactory` updated with `forTenant()` state
-- [x] 5 tenant isolation tests — all PASS
+
+#### Step 1 — Tenancy ✅
+- `tenants` table + `Tenant` model
+- `tenant_id` on users (nullable FK)
+- `TenantContext` service + `BelongsToTenant` trait
+- 5 isolation tests passing
+
+#### Step 2 — Roles & Permissions ✅
+- `Role` PHP 8.1 backed enum (7 roles)
+- `role` column on users
+- `AppServiceProvider` Gate definitions (12 gates, platform admin bypasses all)
+- `EnsureRole` middleware registered as `role:` alias
+- 19 authorization tests passing
+
+#### Step 3 — Institutional Hierarchy ✅
+- `Faculty` → `Department` → `Programme` models + migrations
+- `AcademicTerm` model (semester/summer/year, add-drop deadline, active scope)
+- Factories for all 4 models
+- 7 hierarchy + isolation tests passing
+
+#### Step 4 — Courses, Sections & Enrolment ✅
+- `Course` model (code unique per tenant, prerequisites many-to-many)
+- `Section` model (capacity, JSON schedule, TA pivot)
+- `Enrolment` model (enrolled/waitlisted/dropped/completed/withdrawn)
+- `EnrolmentService`: enrol, drop, prerequisite check, waitlist promotion
+- 7 enrolment tests passing (including prerequisite enforcement + waitlist promotion)
 
 ---
 
 ## In Progress
-*(nothing — tenancy checkpoint complete)*
+*(nothing — courses checkpoint complete)*
 
 ---
 
@@ -43,12 +56,13 @@ Roles / Permissions (next)
 ---
 
 ## Next Task
-**Phase 1 — Step 2: Roles & Permissions**
+**Phase 1 — Step 5: Content (Modules & Lessons)**
 
-- Add `role` column to `users` (enum: platform_admin, university_admin, faculty_admin, instructor, teaching_assistant, student, guest)
-- Create Laravel Gates / Policies pattern
-- Create `RoleMiddleware` for route-level protection
-- Write authorization feature tests (e.g. student cannot access instructor routes)
+- `modules` table (course, title, order, release rules)
+- `lessons` table (module, type: video/pdf/text/link/download, order, release_at)
+- `lesson_progress` table (user, lesson, seconds_spent, completed_at, progress_pct)
+- Models: Module, Lesson, LessonProgress
+- Lesson completion service
 
 ---
 
@@ -56,15 +70,14 @@ Roles / Permissions (next)
 
 | Decision | Rationale |
 |---|---|
-| Single MySQL database, shared tables + tenant_id | Simplest correct architecture per spec |
-| phpunit.xml uses SQLite :memory: for tests | Fast, isolated — no touch to dev DB |
-| TenantContext as static class | Simple, zero-dependency; no IoC binding needed for this stage |
-| BelongsToTenant global scope only fires when TenantContext is set | Platform admins (null context) need unfiltered access |
-| tenant_id on users is nullable | Platform Admin users have no tenant |
-| No Redis yet | Core must be stable first |
-| No Docker yet | XAMPP local dev first |
-| Modular monolith | Per spec |
-| PHPUnit #[Test] attributes | Deprecated @test doc-comments fixed — forward compatible with PHPUnit 12 |
+| Single MySQL DB + tenant_id | Simplest correct tenancy |
+| TenantContext static class | Zero dependencies, easy to clear in tests |
+| BelongsToTenant global scope | Auto-isolation on every query |
+| Role enum (not spatie/permission) | Simple, type-safe, no extra package needed at this stage |
+| Gate::before for platform admin | Clean bypass without polluting every gate definition |
+| EnrolmentService (not controller logic) | Testable, reusable, follows spec rule |
+| `getOriginal()` bug caught and fixed | Pre-update status must be captured before `update()` call |
+| Migration timestamps manually managed | Artisan sometimes creates same-second timestamps; rename immediately |
 
 ---
 
@@ -80,26 +93,21 @@ Roles / Permissions (next)
 | Unit | 1 | 1 | 0 |
 | Feature — Example | 1 | 1 | 0 |
 | Feature — Tenancy | 5 | 5 | 0 |
-| **Total** | **7** | **7** | **0** |
+| Feature — Auth | 19 | 19 | 0 |
+| Feature — Hierarchy | 7 | 7 | 0 |
+| Feature — Enrolment | 7 | 7 | 0 |
+| **Total** | **39** | **39** | **0** |
 
-Last run: `php artisan test` — **7 passed** ✅
-
----
-
-## Environment Summary
-
-| Item | Value |
-|---|---|
-| Laravel | 12.65.0 |
-| PHP | 8.2.12 |
-| Database | MySQL 8 via XAMPP |
-| DB Name | manhaj |
-| Test DB | SQLite :memory: |
-| Frontend | React + Vite + TypeScript + Tailwind |
-| Test runner | PHPUnit 11.x |
+Last run: `php artisan test` — **39 passed** ✅
 
 ---
 
 ## Git Log (recent)
+- `83798ac` feat(courses): Course, Section, Enrolment + EnrolmentService + tests
+- `8717f5b` feat(academic): Faculty, Department, Programme, AcademicTerm + tests
+- `5df6d65` feat(auth): Role enum, Gates, EnsureRole middleware, authorization tests
 - `4ebc2e5` feat(tenancy): Tenant model, BelongsToTenant trait, TenantContext, isolation tests
 - `14078ce` chore: initial commit - Laravel 12 MANHAJ foundation
+
+## GitHub
+https://github.com/Ahmed-Mahmoudd/Manhaj-e-learning-platform
