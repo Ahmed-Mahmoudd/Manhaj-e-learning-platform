@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Instructor\GradeController;
 use App\Http\Controllers\Api\V1\Instructor\InstructorDashboardController;
 use App\Http\Controllers\Api\V1\Student\StudentDashboardController;
+use App\Http\Controllers\Api\V1\Student\StudentGradeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -43,14 +45,22 @@ Route::prefix('v1')->group(function () {
                 Route::get('courses',                         [StudentDashboardController::class, 'myCourses']);
                 Route::get('sections/{section}/lessons',      [StudentDashboardController::class, 'sectionLessons']);
                 Route::post('lessons/{lesson}/progress',      [StudentDashboardController::class, 'updateProgress']);
+                Route::get('grades',                          [StudentGradeController::class, 'myGrades']);
             });
 
             // Instructor / TA dashboard
             Route::middleware('role:instructor,teaching_assistant')
                  ->prefix('instructor')
                  ->group(function () {
-                     Route::get('sections',                          [InstructorDashboardController::class, 'mySections']);
-                     Route::get('sections/{section}/enrolments',     [InstructorDashboardController::class, 'sectionEnrolments']);
+                     Route::get('sections',                                    [InstructorDashboardController::class, 'mySections']);
+                     Route::get('sections/{section}/enrolments',               [InstructorDashboardController::class, 'sectionEnrolments']);
+                     // Grade items
+                     Route::get('sections/{section}/grade-items',              [GradeController::class, 'index']);
+                     Route::post('sections/{section}/grade-items',             [GradeController::class, 'store']);
+                     // Individual grades
+                     Route::post('grade-items/{item}/grades/{student}',        [GradeController::class, 'enterGrade']);
+                     Route::get('grade-items/{item}/grades',                   [GradeController::class, 'grades']);
+                     Route::post('grade-items/{item}/publish',                 [GradeController::class, 'publish']);
                  });
 
         });

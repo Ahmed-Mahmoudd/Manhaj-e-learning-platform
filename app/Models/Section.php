@@ -59,6 +59,11 @@ class Section extends Model
         return $this->hasMany(Enrolment::class);
     }
 
+    public function gradeItems(): HasMany
+    {
+        return $this->hasMany(GradeItem::class)->orderBy('order');
+    }
+
     // ─── Business helpers ─────────────────────────────────────────────────────
 
     public function enrolledCount(): int
