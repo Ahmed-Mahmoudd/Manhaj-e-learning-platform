@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\DiscussionController;
 use App\Http\Controllers\Api\V1\Instructor\AnnouncementController as InstructorAnnouncementController;
 use App\Http\Controllers\Api\V1\Instructor\GradeController;
 use App\Http\Controllers\Api\V1\Instructor\InstructorDashboardController;
@@ -69,6 +70,24 @@ Route::prefix('v1')->group(function () {
                      Route::get('sections/{section}/announcements',            [InstructorAnnouncementController::class, 'index']);
                      Route::post('sections/{section}/announcements',           [InstructorAnnouncementController::class, 'store']);
                      Route::post('announcements/{announcement}/publish',       [InstructorAnnouncementController::class, 'publish']);
+                 });
+
+            // ── Discussion forum — shared (student + instructor + TA) ─────────
+            Route::middleware('role:student,instructor,teaching_assistant')
+                 ->prefix('discuss')
+                 ->group(function () {
+                     // Thread list & view
+                     Route::get('sections/{section}/threads',   [DiscussionController::class, 'threads']);
+                     Route::get('threads/{thread}',             [DiscussionController::class, 'show']);
+                     // Create thread / reply
+                     Route::post('sections/{section}/threads',  [DiscussionController::class, 'store']);
+                     Route::post('threads/{thread}/posts',      [DiscussionController::class, 'addPost']);
+                     // Upvote (toggle)
+                     Route::post('posts/{post}/vote',           [DiscussionController::class, 'vote']);
+                     // Instructor-gated (assertInstructor() inside controller)
+                     Route::post('threads/{thread}/pin',        [DiscussionController::class, 'pin']);
+                     Route::post('threads/{thread}/lock',       [DiscussionController::class, 'lock']);
+                     Route::post('posts/{post}/answer',         [DiscussionController::class, 'markAnswer']);
                  });
 
         });

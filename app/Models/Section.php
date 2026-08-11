@@ -69,6 +69,13 @@ class Section extends Model
         return $this->hasMany(Announcement::class)->latest('published_at');
     }
 
+    public function discussionThreads(): HasMany
+    {
+        return $this->hasMany(DiscussionThread::class)
+                    ->orderByDesc('is_pinned')
+                    ->orderByDesc('last_activity_at');
+    }
+
     // ─── Business helpers ─────────────────────────────────────────────────────
 
     public function enrolledCount(): int
