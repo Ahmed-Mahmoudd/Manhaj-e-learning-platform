@@ -85,6 +85,76 @@ class EnrolmentService
         });
     }
 
+    /**
+     * Check whether a student is eligible to enrol in a section.
+     * Returns a structured result instead of throwing, for API use.
+     *
+     * @return array{can_enrol: bool, would_be_waitlisted: bool, reason: string|null, missing_prerequisites: array}
+     */
+    public function checkEligibility(User $student, Section $section): array
+    {
+        $missing = [];
+
+        // Already enrolled / waitlisted?
+        $existing = Enrolment::withoutGlobalScope('tenant')
+            ->where('student_id', $student->id)
+            ->where('section_id', $section->id)
+            ->whereIn('status', ['enrolled', 'waitlisted'])
+            ->first();
+
+        if ($existing) {
+            return [
+                'can_enrol'           => false,
+                'would_be_waitlisted' => false,
+                'reason'              => $existing->status === 'enrolled'
+                    ? 'You are already enrolled in this section.'
+                    : 'You are already on the waitlist for this section.',
+                'missing_prerequisites' => [],
+            ];
+        }
+
+        // Section active?
+        if (! $section->is_active) {
+            return [
+                'can_enrol'             => false,
+                'would_be_waitlisted'   => false,
+                'reason'                => 'This section is not currently accepting enrolments.',
+                'missing_prerequisites' => [],
+            ];
+        }
+
+        // Prerequisites
+        foreach ($section->course->prerequisites as $prereq) {
+            $completed = Enrolment::withoutGlobalScope('tenant')
+                ->where('student_id', $student->id)
+                ->where('status', 'completed')
+                ->whereHas('section', fn($q) => $q->where('course_id', $prereq->id))
+                ->exists();
+
+            if (! $completed) {
+                $missing[] = ['code' => $prereq->code, 'title' => $prereq->title_en];
+            }
+        }
+
+        if (! empty($missing)) {
+            return [
+                'can_enrol'             => false,
+                'would_be_waitlisted'   => false,
+                'reason'                => 'Prerequisites not met.',
+                'missing_prerequisites' => $missing,
+            ];
+        }
+
+        $hasCapacity = $section->hasCapacity();
+
+        return [
+            'can_enrol'             => true,
+            'would_be_waitlisted'   => ! $hasCapacity,
+            'reason'                => $hasCapacity ? null : 'Section is full — you will be placed on the waitlist.',
+            'missing_prerequisites' => [],
+        ];
+    }
+
     // ─── Private helpers ──────────────────────────────────────────────────────
 
     /**

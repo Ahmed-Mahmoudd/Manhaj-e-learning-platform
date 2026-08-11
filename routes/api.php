@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\DiscussionController;
 use App\Http\Controllers\Api\V1\Instructor\AnnouncementController as InstructorAnnouncementController;
 use App\Http\Controllers\Api\V1\Instructor\GradeController;
 use App\Http\Controllers\Api\V1\Instructor\InstructorDashboardController;
+use App\Http\Controllers\Api\V1\Student\EnrolmentController;
 use App\Http\Controllers\Api\V1\Student\StudentAnnouncementController;
 use App\Http\Controllers\Api\V1\Student\StudentDashboardController;
 use App\Http\Controllers\Api\V1\Student\StudentGradeController;
@@ -45,12 +46,17 @@ Route::prefix('v1')->group(function () {
 
             // Student dashboard
             Route::middleware('role:student')->prefix('student')->group(function () {
-                Route::get('courses',                         [StudentDashboardController::class, 'myCourses']);
-                Route::get('sections/{section}/lessons',      [StudentDashboardController::class, 'sectionLessons']);
-                Route::post('lessons/{lesson}/progress',      [StudentDashboardController::class, 'updateProgress']);
-                Route::get('grades',                          [StudentGradeController::class, 'myGrades']);
-                Route::get('announcements',                   [StudentAnnouncementController::class, 'index']);
-                Route::post('announcements/{announcement}/read', [StudentAnnouncementController::class, 'markRead']);
+                Route::get('courses',                              [StudentDashboardController::class, 'myCourses']);
+                Route::get('sections/{section}/lessons',           [StudentDashboardController::class, 'sectionLessons']);
+                Route::post('lessons/{lesson}/progress',           [StudentDashboardController::class, 'updateProgress']);
+                Route::get('grades',                               [StudentGradeController::class, 'myGrades']);
+                Route::get('announcements',                        [StudentAnnouncementController::class, 'index']);
+                Route::post('announcements/{announcement}/read',   [StudentAnnouncementController::class, 'markRead']);
+                // Enrolment self-service
+                Route::get('enrolments',                           [EnrolmentController::class, 'index']);
+                Route::get('sections/{section}/eligibility',       [EnrolmentController::class, 'eligibility']);
+                Route::post('sections/{section}/enrol',            [EnrolmentController::class, 'enrol']);
+                Route::post('enrolments/{enrolment}/drop',         [EnrolmentController::class, 'drop']);
             });
 
             // Instructor / TA dashboard
