@@ -43,6 +43,11 @@ class Course extends Model
         return $this->hasMany(Section::class);
     }
 
+    public function modules(): HasMany
+    {
+        return $this->hasMany(\App\Models\Module::class)->orderBy('order');
+    }
+
     /** Courses that MUST be completed before enrolling in this course */
     public function prerequisites(): BelongsToMany
     {

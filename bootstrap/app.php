@@ -13,8 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'role' => \App\Http\Middleware\EnsureRole::class,
+            'role'           => \App\Http\Middleware\EnsureRole::class,
+            'tenant'         => \App\Http\Middleware\ResolveTenant::class,
+            'require.tenant' => \App\Http\Middleware\RequireTenant::class,
         ]);
+
+        // Resolve tenant on every API request (optional header, no-op if absent)
+        $middleware->appendToGroup('api', \App\Http\Middleware\ResolveTenant::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

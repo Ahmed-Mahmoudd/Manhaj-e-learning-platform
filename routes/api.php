@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Instructor\InstructorDashboardController;
+use App\Http\Controllers\Api\V1\Student\StudentDashboardController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -8,18 +10,24 @@ use Illuminate\Support\Facades\Route;
 | API Routes — Version 1
 |--------------------------------------------------------------------------
 |
-| All routes are prefixed /api/v1 (Laravel adds /api, we add v1 below).
+| ResolveTenant middleware runs automatically on all API requests
+| (registered in bootstrap/app.php as part of the 'api' group).
+|
+| Route protection layers:
+|   auth:sanctum   — valid Bearer token required
+|   require.tenant — X-Tenant-ID header required
+|   role:X         — specific role required
 |
 */
 
 Route::prefix('v1')->group(function () {
 
-    // ── Public auth endpoints ─────────────────────────────────────────────
+    // ── Public: auth ──────────────────────────────────────────────────────
     Route::prefix('auth')->group(function () {
-        Route::post('login',  [AuthController::class, 'login']);
+        Route::post('login', [AuthController::class, 'login']);
     });
 
-    // ── Protected endpoints (Sanctum token required) ──────────────────────
+    // ── Protected: all authenticated users ───────────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
 
         Route::prefix('auth')->group(function () {
@@ -27,5 +35,24 @@ Route::prefix('v1')->group(function () {
             Route::post('logout', [AuthController::class, 'logout']);
         });
 
+        // ── Tenant-scoped routes (X-Tenant-ID required) ──────────────────
+        Route::middleware('require.tenant')->group(function () {
+
+            // Student dashboard
+            Route::middleware('role:student')->prefix('student')->group(function () {
+                Route::get('courses',                         [StudentDashboardController::class, 'myCourses']);
+                Route::get('sections/{section}/lessons',      [StudentDashboardController::class, 'sectionLessons']);
+                Route::post('lessons/{lesson}/progress',      [StudentDashboardController::class, 'updateProgress']);
+            });
+
+            // Instructor / TA dashboard
+            Route::middleware('role:instructor,teaching_assistant')
+                 ->prefix('instructor')
+                 ->group(function () {
+                     Route::get('sections',                          [InstructorDashboardController::class, 'mySections']);
+                     Route::get('sections/{section}/enrolments',     [InstructorDashboardController::class, 'sectionEnrolments']);
+                 });
+
+        });
     });
 });
