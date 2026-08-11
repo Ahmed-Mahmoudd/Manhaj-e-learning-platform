@@ -35,4 +35,29 @@ class Tenant extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function faculties(): HasMany
+    {
+        return $this->hasMany(Faculty::class);
+    }
+
+    public function departments(): HasMany
+    {
+        return $this->hasMany(Department::class);
+    }
+
+    public function courses(): HasMany
+    {
+        return $this->hasMany(Course::class);
+    }
+
+    public function sections(): HasMany
+    {
+        return $this->hasMany(Section::class);
+    }
+
+    public function enrolments(): HasMany
+    {
+        return $this->hasMany(Enrolment::class);
+    }
 }

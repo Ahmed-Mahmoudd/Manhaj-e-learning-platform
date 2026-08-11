@@ -18,12 +18,14 @@ use Illuminate\Database\Eloquent\Builder;
  *  3. Provides a `forTenant()` scope for explicit cross-tenant admin queries.
  *
  * The model using this trait MUST have a `tenant_id` column.
+ * @mixin \Illuminate\Database\Eloquent\Model
  */
 trait BelongsToTenant
 {
     public static function bootBelongsToTenant(): void
     {
         // Auto-fill tenant_id when creating a new record
+        /** @phpstan-ignore-next-line */
         static::creating(function ($model) {
             if (empty($model->tenant_id) && TenantContext::isSet()) {
                 $model->tenant_id = TenantContext::current()->id;
@@ -31,6 +33,7 @@ trait BelongsToTenant
         });
 
         // Global scope: automatically filter by current tenant on every query
+        /** @phpstan-ignore-next-line */
         static::addGlobalScope('tenant', function (Builder $builder) {
             if (TenantContext::isSet()) {
                 $builder->where(
@@ -50,7 +53,7 @@ trait BelongsToTenant
     public function scopeForTenant(Builder $query, Tenant $tenant): Builder
     {
         return $query->withoutGlobalScope('tenant')
-                     ->where($this->getTable() . '.tenant_id', $tenant->id);
+            ->where($this->getTable() . '.tenant_id', $tenant->id);
     }
 
     // ─── Relationship ─────────────────────────────────────────────────────────

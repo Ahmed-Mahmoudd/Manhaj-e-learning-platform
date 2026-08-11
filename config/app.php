@@ -41,6 +41,8 @@ return [
 
     'debug' => (bool) env('APP_DEBUG', false),
 
+    'internal_api_token' => env('INTERNAL_API_TOKEN', null),
+
     /*
     |--------------------------------------------------------------------------
     | Application URL

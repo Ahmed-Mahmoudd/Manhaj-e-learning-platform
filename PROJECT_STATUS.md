@@ -1,10 +1,10 @@
 # MANHAJ — Project Status
 
 ## Current Phase
-**PHASE 4 — COMPLETE ✅ → Moving to PHASE 5**
+**PHASE 7 — COMPLETE ✅ → Moving to PHASE 8**
 
 ## Current Feature
-Phase 5 — Enrolment API (student self-enrol, drop, waitlist auto-promotion, prerequisite enforcement)
+Phase 8 — Course Catalogue API (browsable, filterable, section availability)
 
 ---
 
@@ -39,19 +39,39 @@ Phase 5 — Enrolment API (student self-enrol, drop, waitlist auto-promotion, pr
 
 | Step | Feature | Tests |
 |---|---|---|
-| 1 | Announcement + AnnouncementRead models | — |
-| 2 | AnnouncementService — create, publish, markRead, unreadCount | — |
-| 3 | Instructor API — create, draft, publish | — |
-| 4 | Student API — feed with is_read, mark-read, unread_count | 15 ✅ |
+| 1-4 | AnnouncementService, instructor create/draft/publish, student feed + mark-read | 15 ✅ |
 
 ### Phase 4 — Discussion Forums ✅
 
 | Step | Feature | Tests |
 |---|---|---|
-| 1 | DiscussionThread + DiscussionPost + DiscussionPostVote models | — |
-| 2 | DiscussionService — createThread, reply, togglePin/Lock, markAnswer, toggleVote | — |
-| 3 | Forum API — list, show (paginated), create thread, reply, upvote | — |
-| 4 | Instructor-gated: pin, lock, markAnswer | 16 ✅ |
+| 1-4 | DiscussionService, forum API, pin/lock/markAnswer, upvote | 16 ✅ |
+
+### Phase 5 — Enrolment API ✅
+
+| Endpoint | Feature | Tests |
+|---|---|---|
+| POST enrol | Self-enrol with capacity + prerequisite check, auto-waitlist | — |
+| POST drop | Drop with waitlist auto-promotion | — |
+| GET eligibility | Can-I-enrol check with reason | 14 ✅ |
+
+### Phase 6 — University Admin API ✅
+
+| Resource | Endpoints | Tests |
+|---|---|---|
+| Faculties | CRUD, delete guard | — |
+| Departments | CRUD, filter by faculty, delete guard | — |
+| Terms | CRUD, activate (deactivates others), deactivate | — |
+| Courses | CRUD, prerequisite sync, delete guard | — |
+| Sections | CRUD, filter by course/term, delete guard | — |
+| Users | List (paginated+filter), create, show, updateRole (platform_admin protected) | 22 ✅ |
+
+### Phase 7 — Platform Admin API ✅
+
+| Resource | Endpoints | Tests |
+|---|---|---|
+| Tenants | List (paginated, search, active filter), create, update, activate/deactivate, stats | — |
+| Users | List (any tenant), create (any role), show, impersonate (short-lived token) | 12 ✅ |
 
 ---
 
@@ -96,34 +116,22 @@ tenants → users → faculties → departments → programmes
 | Feature — Grades API | 13 | 13 ✅ |
 | Feature — Announcements | 15 | 15 ✅ |
 | Feature — Discussion Forums | 16 | 16 ✅ |
+| Feature — Enrolment API | 14 | 14 ✅ |
+| Feature — University Admin API | 22 | 22 ✅ |
+| Feature — Platform Admin API | 12 | 12 ✅ |
 | Feature — Example | 1 | 1 ✅ |
-| **Total** | **122** | **122 ✅** |
+| **Total** | **170** | **170 ✅** |
 
-Last run: `php artisan test` — **122 passed, 0 failed** ✅
+Last run: `php artisan test` — **170 passed, 0 failed** ✅
 
 ---
 
 ## What Is Left (Remaining Phases)
 
-### Phase 5 — Enrolment API 🔄 IN PROGRESS
-- `POST /api/v1/student/sections/{section}/enrol` — self-enrol (prerequisite check, capacity check, waitlist)
-- `POST /api/v1/student/enrolments/{id}/drop` — drop with waitlist auto-promotion
-- `GET  /api/v1/student/sections/{section}/eligibility` — can I enrol? why not?
-
-### Phase 6 — University Admin API
-- Manage faculties, departments, programmes
-- Manage academic terms (open/close)
-- Manage courses and sections (CRUD)
-- User management (invite, deactivate, role assignment)
-
-### Phase 7 — Platform Admin API
-- Tenant (university) CRUD
-- Tenant suspension / reactivation
-- Platform-wide stats
-
-### Phase 8 — Search & Catalogue
-- Course catalogue endpoint (browsable, filterable by dept / term)
-- Section availability check (seats, prerequisites)
+### Phase 8 — Course Catalogue API 🔄 NEXT
+- `GET /api/v1/catalogue/courses` — browsable courses (filter: dept, term, credits, search)
+- `GET /api/v1/catalogue/courses/{course}` — detail with sections, prerequisites
+- `GET /api/v1/catalogue/sections/{section}/availability` — seats left, waitlist depth
 
 ### Phase 9 — INTERN B Integration Layer
 - `POST /api/v1/internal/ml/recommendations` — ingest ML recommendations
@@ -152,10 +160,15 @@ Last run: `php artisan test` — **122 passed, 0 failed** ✅
 | DiscussionController uses single shared controller | Forum is symmetric (student + instructor both post); role gates happen inside methods |
 | MySQL index names must be ≤ 64 chars | Long compound index names must use explicit short aliases |
 | SQLite boolean casts need fresh() | After `Model::create()` booleans may be null until reloaded from DB |
+| Admin controllers use TenantContext::require() | Not ::get(); must be called after RequireTenant middleware has run |
+| Platform routes use separate prefix (v1/platform) | No X-Tenant-ID header required; platform_admin sees all tenants without scoping |
 
 ---
 
 ## Git Log (recent)
+- feat(platform): Platform Admin API — tenant CRUD, activate/deactivate, stats, user create, impersonate — 170 tests
+- feat(admin): University Admin API — Faculty/Dept/Term/Course/Section/User CRUD — 158 tests
+- feat(enrolment): Enrolment API — self-enrol, drop, waitlist, eligibility — 136 tests
 - `acdc634` feat(discussion): DiscussionThread + DiscussionPost + Vote models, DiscussionService, forum API — 122 tests
 - `4068c56` feat(announcements): Announcement + AnnouncementRead models, AnnouncementService — 106 tests
 - `4ad2710` feat(grades): GradeItem + StudentGrade models, GradeService, instructor/student grade APIs — 91 tests
@@ -163,6 +176,3 @@ Last run: `php artisan test` — **122 passed, 0 failed** ✅
 - `08f1ef6` feat(api): Sanctum auth — login, me, logout endpoints + 10 API tests
 - `6b75987` feat(content): Module, Lesson, LessonProgress + LessonProgressService + demo seeder
 - `83798ac` feat(courses): Course, Section, Enrolment + EnrolmentService + tests
-- `8717f5b` feat(academic): Faculty, Department, Programme, AcademicTerm + tests
-- `5df6d65` feat(auth): Role enum, Gates, EnsureRole middleware, authorization tests
-- `4ebc2e5` feat(tenancy): Tenant model, BelongsToTenant trait, TenantContext, isolation tests

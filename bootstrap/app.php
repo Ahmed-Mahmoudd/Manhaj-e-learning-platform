@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role'           => \App\Http\Middleware\EnsureRole::class,
             'tenant'         => \App\Http\Middleware\ResolveTenant::class,
             'require.tenant' => \App\Http\Middleware\RequireTenant::class,
+            'internal.token' => \App\Http\Middleware\ValidateInternalToken::class,
         ]);
 
         // Resolve tenant on every API request (optional header, no-op if absent)
