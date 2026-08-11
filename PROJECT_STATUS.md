@@ -1,10 +1,10 @@
 # MANHAJ — Project Status
 
 ## Current Phase
-**PHASE 1 — ACADEMIC CORE**
+**PHASE 1 — COMPLETE ✅ → Moving to PHASE 2**
 
 ## Current Feature
-Content (Modules & Lessons) — next
+Phase 2 — Assessment & Grades (next)
 
 ---
 
@@ -12,57 +12,54 @@ Content (Modules & Lessons) — next
 
 ### Phase 0 — Foundation ✅
 - Laravel 12.65.0, PHP 8.2.12, MySQL via XAMPP
-- Git initialized, GitHub remote: https://github.com/Ahmed-Mahmoudd/Manhaj-e-learning-platform
-- Initial test suite passing
+- Git + GitHub: https://github.com/Ahmed-Mahmoudd/Manhaj-e-learning-platform
 
-### Phase 1 — Academic Core
+### Phase 1 — Academic Core ✅
 
-#### Step 1 — Tenancy ✅
-- `tenants` table + `Tenant` model
-- `tenant_id` on users (nullable FK)
-- `TenantContext` service + `BelongsToTenant` trait
-- 5 isolation tests passing
+| Step | Feature | Tests |
+|---|---|---|
+| 1 | Tenancy (TenantContext, BelongsToTenant, Tenant model) | 5 ✅ |
+| 2 | Roles & Permissions (Role enum, 12 Gates, EnsureRole middleware) | 19 ✅ |
+| 3 | Institutional Hierarchy (Faculty→Dept→Programme, AcademicTerm) | 7 ✅ |
+| 4 | Courses, Sections, Enrolment + EnrolmentService | 7 ✅ |
+| 5 | Content — Modules, Lessons, LessonProgress + LessonProgressService | 10 ✅ |
+| 6 | Demo DatabaseSeeder — 2 universities, full hierarchy, courses, students | ✅ |
 
-#### Step 2 — Roles & Permissions ✅
-- `Role` PHP 8.1 backed enum (7 roles)
-- `role` column on users
-- `AppServiceProvider` Gate definitions (12 gates, platform admin bypasses all)
-- `EnsureRole` middleware registered as `role:` alias
-- 19 authorization tests passing
-
-#### Step 3 — Institutional Hierarchy ✅
-- `Faculty` → `Department` → `Programme` models + migrations
-- `AcademicTerm` model (semester/summer/year, add-drop deadline, active scope)
-- Factories for all 4 models
-- 7 hierarchy + isolation tests passing
-
-#### Step 4 — Courses, Sections & Enrolment ✅
-- `Course` model (code unique per tenant, prerequisites many-to-many)
-- `Section` model (capacity, JSON schedule, TA pivot)
-- `Enrolment` model (enrolled/waitlisted/dropped/completed/withdrawn)
-- `EnrolmentService`: enrol, drop, prerequisite check, waitlist promotion
-- 7 enrolment tests passing (including prerequisite enforcement + waitlist promotion)
+**Phase 1 Exit Condition MET:**
+- ✅ Admin can create term / course / section (data model + seeder proves it)
+- ✅ Student can enrol and open a lesson (EnrolmentService + LessonProgressService proven in tests)
 
 ---
 
-## In Progress
-*(nothing — courses checkpoint complete)*
+## Database Tables (MySQL `manhaj`)
+`tenants` → `users` → `faculties` → `departments` → `programmes`
+→ `academic_terms` → `courses` → `course_prerequisites` → `sections`
+→ `section_teaching_assistants` → `enrolments`
+→ `modules` → `lessons` → `lesson_progress`
+(+ `cache`, `jobs`, `sessions`, `password_reset_tokens`)
 
----
-
-## Blocked
-*(none)*
+## Demo Credentials (after `php artisan db:seed`)
+| Role | Email | Password |
+|---|---|---|
+| Platform Admin | admin@manhaj.app | password |
+| CUT Uni Admin | admin@cut.manhaj.app | password |
+| CUT Instructor | instructor@cut.manhaj.app | password |
+| CUT Student | student@cut.manhaj.app | password |
+| AIS Uni Admin | admin@ais.manhaj.app | password |
+| AIS Student | student@ais.manhaj.app | password |
 
 ---
 
 ## Next Task
-**Phase 1 — Step 5: Content (Modules & Lessons)**
+**Phase 2 — Step 1: Authentication API**
 
-- `modules` table (course, title, order, release rules)
-- `lessons` table (module, type: video/pdf/text/link/download, order, release_at)
-- `lesson_progress` table (user, lesson, seconds_spent, completed_at, progress_pct)
-- Models: Module, Lesson, LessonProgress
-- Lesson completion service
+Laravel Sanctum token auth:
+- `POST /api/v1/auth/login` → returns token
+- `POST /api/v1/auth/logout`
+- `GET  /api/v1/auth/me`
+- Login feature tests (valid, invalid, role assertion on me endpoint)
+
+Then immediately: Student Dashboard API + Instructor Dashboard API
 
 ---
 
@@ -70,44 +67,35 @@ Content (Modules & Lessons) — next
 
 | Decision | Rationale |
 |---|---|
-| Single MySQL DB + tenant_id | Simplest correct tenancy |
-| TenantContext static class | Zero dependencies, easy to clear in tests |
-| BelongsToTenant global scope | Auto-isolation on every query |
-| Role enum (not spatie/permission) | Simple, type-safe, no extra package needed at this stage |
-| Gate::before for platform admin | Clean bypass without polluting every gate definition |
-| EnrolmentService (not controller logic) | Testable, reusable, follows spec rule |
-| `getOriginal()` bug caught and fixed | Pre-update status must be captured before `update()` call |
-| Migration timestamps manually managed | Artisan sometimes creates same-second timestamps; rename immediately |
-
----
-
-## Known Issues
-*(none)*
+| Factory closure-based tenant_id removed | Causes "Factory cannot be converted to string" when chained; tests always supply tenant_id explicitly |
+| LessonProgressService uses withoutGlobalScope | Progress records must be found regardless of current TenantContext |
+| Progress never goes backwards | `max($old, $new)` prevents out-of-order video heartbeats corrupting data |
+| DatabaseSeeder idempotent-friendly via fresh data | Run `migrate:fresh --seed` to reset cleanly |
 
 ---
 
 ## Tests Status
 
-| Suite | Tests | Passing | Failing |
-|---|---|---|---|
-| Unit | 1 | 1 | 0 |
-| Feature — Example | 1 | 1 | 0 |
-| Feature — Tenancy | 5 | 5 | 0 |
-| Feature — Auth | 19 | 19 | 0 |
-| Feature — Hierarchy | 7 | 7 | 0 |
-| Feature — Enrolment | 7 | 7 | 0 |
-| **Total** | **39** | **39** | **0** |
+| Suite | Tests | Passing |
+|---|---|---|
+| Unit | 1 | 1 ✅ |
+| Feature — Tenancy | 5 | 5 ✅ |
+| Feature — Auth | 19 | 19 ✅ |
+| Feature — Hierarchy | 7 | 7 ✅ |
+| Feature — Enrolment | 7 | 7 ✅ |
+| Feature — Content | 10 | 10 ✅ |
+| Feature — Example | 1 | 1 ✅ |
+| **Total** | **49** | **49 ✅** |
 
-Last run: `php artisan test` — **39 passed** ✅
+Last run: `php artisan test` — **49 passed, 0 failed** ✅
 
 ---
 
 ## Git Log (recent)
+- `6b75987` feat(content): Module, Lesson, LessonProgress + LessonProgressService + demo seeder
+- `1ad046a` feat(content): [pre-rebase version]
+- `fdd0960` [remote commit]
 - `83798ac` feat(courses): Course, Section, Enrolment + EnrolmentService + tests
 - `8717f5b` feat(academic): Faculty, Department, Programme, AcademicTerm + tests
 - `5df6d65` feat(auth): Role enum, Gates, EnsureRole middleware, authorization tests
 - `4ebc2e5` feat(tenancy): Tenant model, BelongsToTenant trait, TenantContext, isolation tests
-- `14078ce` chore: initial commit - Laravel 12 MANHAJ foundation
-
-## GitHub
-https://github.com/Ahmed-Mahmoudd/Manhaj-e-learning-platform
