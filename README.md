@@ -787,13 +787,5 @@ Responsible for:
 * Similarity
 * Model evaluation
 
----
-
-# 📄 License
-
-This project is currently developed as an internship/project deliverable.
-
-License and distribution terms are to be determined.
-
 ```
 ```
