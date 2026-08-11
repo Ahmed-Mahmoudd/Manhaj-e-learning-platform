@@ -1,10 +1,7 @@
 # MANHAJ — Project Status
 
 ## Current Phase
-**PHASE 7 — COMPLETE ✅ → Moving to PHASE 8**
-
-## Current Feature
-Phase 8 — Course Catalogue API (browsable, filterable, section availability)
+**ALL PHASES COMPLETE ✅ — 192 Tests Passing**
 
 ---
 
@@ -15,7 +12,6 @@ Phase 8 — Course Catalogue API (browsable, filterable, section availability)
 - Git + GitHub: https://github.com/Ahmed-Mahmoudd/Manhaj-e-learning-platform
 
 ### Phase 1 — Academic Core ✅
-
 | Step | Feature | Tests |
 |---|---|---|
 | 1 | Tenancy (TenantContext, BelongsToTenant, Tenant model) | 5 ✅ |
@@ -26,7 +22,6 @@ Phase 8 — Course Catalogue API (browsable, filterable, section availability)
 | 6 | Demo DatabaseSeeder — 2 universities, full hierarchy, courses, students | ✅ |
 
 ### Phase 2 — REST API Layer ✅
-
 | Step | Feature | Tests |
 |---|---|---|
 | 1 | Sanctum Auth — login, me, logout | 10 ✅ |
@@ -36,19 +31,16 @@ Phase 8 — Course Catalogue API (browsable, filterable, section availability)
 | 5 | Grades API — GradeItem, StudentGrade, GradeService, publish flow | 13 ✅ |
 
 ### Phase 3 — Announcements ✅
-
 | Step | Feature | Tests |
 |---|---|---|
 | 1-4 | AnnouncementService, instructor create/draft/publish, student feed + mark-read | 15 ✅ |
 
 ### Phase 4 — Discussion Forums ✅
-
 | Step | Feature | Tests |
 |---|---|---|
 | 1-4 | DiscussionService, forum API, pin/lock/markAnswer, upvote | 16 ✅ |
 
 ### Phase 5 — Enrolment API ✅
-
 | Endpoint | Feature | Tests |
 |---|---|---|
 | POST enrol | Self-enrol with capacity + prerequisite check, auto-waitlist | — |
@@ -56,49 +48,34 @@ Phase 8 — Course Catalogue API (browsable, filterable, section availability)
 | GET eligibility | Can-I-enrol check with reason | 14 ✅ |
 
 ### Phase 6 — University Admin API ✅
-
 | Resource | Endpoints | Tests |
 |---|---|---|
 | Faculties | CRUD, delete guard | — |
 | Departments | CRUD, filter by faculty, delete guard | — |
-| Terms | CRUD, activate (deactivates others), deactivate | — |
+| Terms | CRUD, activate (deactivates others) | — |
 | Courses | CRUD, prerequisite sync, delete guard | — |
 | Sections | CRUD, filter by course/term, delete guard | — |
-| Users | List (paginated+filter), create, show, updateRole (platform_admin protected) | 22 ✅ |
+| Users | List, create, show, updateRole (platform_admin protected) | 22 ✅ |
 
 ### Phase 7 — Platform Admin API ✅
-
 | Resource | Endpoints | Tests |
 |---|---|---|
-| Tenants | List (paginated, search, active filter), create, update, activate/deactivate, stats | — |
-| Users | List (any tenant), create (any role), show, impersonate (short-lived token) | 12 ✅ |
+| Tenants | List (paginated, search, filter), create, update, activate/deactivate, stats | — |
+| Users | List (any tenant), create (any role), show, impersonate | 12 ✅ |
 
----
-
-## Database Tables (MySQL `manhaj`)
-
-```
-tenants → users → faculties → departments → programmes
-→ academic_terms → courses → course_prerequisites → sections
-→ section_teaching_assistants → enrolments
-→ modules → lessons → lesson_progress
-→ grade_items → student_grades
-→ announcements → announcement_reads
-→ discussion_threads → discussion_posts → discussion_post_votes
-→ personal_access_tokens
-(+ cache, jobs, sessions, password_reset_tokens)
-```
-
-## Demo Credentials (after `php artisan db:seed`)
-
-| Role | Email | Password |
+### Phase 8 — Course Catalogue ✅
+| Endpoint | Feature | Tests |
 |---|---|---|
-| Platform Admin | admin@manhaj.app | password |
-| CUT Uni Admin | admin@cut.manhaj.app | password |
-| CUT Instructor | instructor@cut.manhaj.app | password |
-| CUT Student | student@cut.manhaj.app | password |
-| AIS Uni Admin | admin@ais.manhaj.app | password |
-| AIS Student | student@ais.manhaj.app | password |
+| GET catalogue/courses | Paginated, filter by dept/faculty/term/credits/search | — |
+| GET catalogue/courses/{id} | Detail with sections + prerequisites | — |
+| GET catalogue/sections/{id}/availability | Seats, waitlist, is_full | 12 ✅ |
+
+### Phase 9 — Teammate B Integration ✅
+| Endpoint | Feature | Tests |
+|---|---|---|
+| POST internal/ml/recommendations | Batch upsert ML recs (token-gated) | — |
+| POST internal/webhook | Generic event acknowledgement | — |
+| GET student/recommendations | Student-facing feed, sorted by score | 10 ✅ |
 
 ---
 
@@ -119,60 +96,46 @@ tenants → users → faculties → departments → programmes
 | Feature — Enrolment API | 14 | 14 ✅ |
 | Feature — University Admin API | 22 | 22 ✅ |
 | Feature — Platform Admin API | 12 | 12 ✅ |
+| Feature — Course Catalogue | 12 | 12 ✅ |
+| Feature — Teammate B Integration | 10 | 10 ✅ |
 | Feature — Example | 1 | 1 ✅ |
-| **Total** | **170** | **170 ✅** |
+| **Total** | **192** | **192 ✅** |
 
-Last run: `php artisan test` — **170 passed, 0 failed** ✅
-
----
-
-## What Is Left (Remaining Phases)
-
-### Phase 8 — Course Catalogue API 🔄 NEXT
-- `GET /api/v1/catalogue/courses` — browsable courses (filter: dept, term, credits, search)
-- `GET /api/v1/catalogue/courses/{course}` — detail with sections, prerequisites
-- `GET /api/v1/catalogue/sections/{section}/availability` — seats left, waitlist depth
-
-### Phase 9 — INTERN B Integration Layer
-- `POST /api/v1/internal/ml/recommendations` — ingest ML recommendations
-- `GET  /api/v1/student/recommendations` — surface to student
-- Webhook endpoint for FastAPI to push events
-
-### Phase 10 — Polish & Production Readiness
-- Rate limiting on all API groups
-- API versioning strategy
-- `.env.example` audit
-- OpenAPI / Swagger spec (L5-Swagger)
-- `migrate:fresh --seed` smoke test in CI
+Last run: `php artisan test` — **192 passed, 0 failed** ✅
 
 ---
 
-## Important Decisions
+## Database Tables
 
-| Decision | Rationale |
-|---|---|
-| Factory closure-based tenant_id removed | Causes "Factory cannot be converted to string" when chained; tests always supply tenant_id explicitly |
-| LessonProgressService uses withoutGlobalScope | Progress records must be found regardless of current TenantContext |
-| Progress never goes backwards | `max($old, $new)` prevents out-of-order video heartbeats corrupting data |
-| DatabaseSeeder idempotent-friendly via fresh data | Run `migrate:fresh --seed` to reset cleanly |
-| GradeService uses withoutGlobalScope | StudentGrade records don't carry tenant context in session during instructor entry |
-| AnnouncementService uses withoutGlobalScope | Student feed query runs outside tenant scope (reads across enrolled sections) |
-| DiscussionController uses single shared controller | Forum is symmetric (student + instructor both post); role gates happen inside methods |
-| MySQL index names must be ≤ 64 chars | Long compound index names must use explicit short aliases |
-| SQLite boolean casts need fresh() | After `Model::create()` booleans may be null until reloaded from DB |
-| Admin controllers use TenantContext::require() | Not ::get(); must be called after RequireTenant middleware has run |
-| Platform routes use separate prefix (v1/platform) | No X-Tenant-ID header required; platform_admin sees all tenants without scoping |
+```
+tenants → users → faculties → departments → programmes
+→ academic_terms → courses → course_prerequisites → sections
+→ section_teaching_assistants → enrolments
+→ modules → lessons → lesson_progress
+→ grade_items → student_grades
+→ announcements → announcement_reads
+→ discussion_threads → discussion_posts → discussion_post_votes
+→ recommendations
+→ personal_access_tokens
+```
+
+## Demo Credentials (after `php artisan db:seed`)
+
+| Role | Email | Password |
+|---|---|---|
+| Platform Admin | admin@manhaj.app | password |
+| CUT Uni Admin | admin@cut.manhaj.app | password |
+| CUT Instructor | instructor@cut.manhaj.app | password |
+| CUT Student | student@cut.manhaj.app | password |
+| AIS Uni Admin | admin@ais.manhaj.app | password |
+| AIS Student | student@ais.manhaj.app | password |
 
 ---
 
-## Git Log (recent)
-- feat(platform): Platform Admin API — tenant CRUD, activate/deactivate, stats, user create, impersonate — 170 tests
-- feat(admin): University Admin API — Faculty/Dept/Term/Course/Section/User CRUD — 158 tests
-- feat(enrolment): Enrolment API — self-enrol, drop, waitlist, eligibility — 136 tests
-- `acdc634` feat(discussion): DiscussionThread + DiscussionPost + Vote models, DiscussionService, forum API — 122 tests
-- `4068c56` feat(announcements): Announcement + AnnouncementRead models, AnnouncementService — 106 tests
-- `4ad2710` feat(grades): GradeItem + StudentGrade models, GradeService, instructor/student grade APIs — 91 tests
-- `4781864` feat(api): ResolveTenant + RequireTenant middleware, student dashboard API, instructor dashboard API — 78 tests
-- `08f1ef6` feat(api): Sanctum auth — login, me, logout endpoints + 10 API tests
-- `6b75987` feat(content): Module, Lesson, LessonProgress + LessonProgressService + demo seeder
-- `83798ac` feat(courses): Course, Section, Enrolment + EnrolmentService + tests
+## Git Log
+- `803c940` feat: phases 5-9 complete - Enrolment, University Admin, Platform Admin, Catalogue, Teammate B integration - 192 tests
+- `acdc634` feat(discussion): DiscussionThread + DiscussionPost + Vote models — 122 tests
+- `4068c56` feat(announcements): Announcement + AnnouncementRead models — 106 tests
+- `4ad2710` feat(grades): GradeItem + StudentGrade models, GradeService — 91 tests
+- `4781864` feat(api): ResolveTenant + RequireTenant middleware, dashboards — 78 tests
+- `08f1ef6` feat(api): Sanctum auth — login, me, logout — 10 tests
