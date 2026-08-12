@@ -11,7 +11,7 @@ interface ProgressBarProps {
 }
 
 /**
- * Chronological / completion progress — fills from inline-start (LTR: left, RTL: right).
+ * Chronological / completion progress — fill grows from inline-start (LTR: left, RTL: right).
  */
 export function ProgressBar({
   value,
@@ -34,7 +34,7 @@ export function ProgressBar({
         </div>
       )}
       <div
-        className={`relative ${height} w-full overflow-hidden bg-ink/10`}
+        className={`flex ${height} w-full overflow-hidden bg-ink/10`}
         role="progressbar"
         aria-valuenow={clamped}
         aria-valuemin={0}
@@ -42,7 +42,7 @@ export function ProgressBar({
         aria-label={label ?? t('contentProgress')}
       >
         <div
-          className="absolute inset-y-0 start-0 bg-sage transition-[width] duration-300"
+          className="h-full shrink-0 bg-sage transition-[width] duration-300"
           style={{ width: `${clamped}%` }}
         />
       </div>
