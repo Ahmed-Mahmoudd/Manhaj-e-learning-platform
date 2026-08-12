@@ -32,7 +32,11 @@ class StudentDashboardController extends Controller
     {
         $student = $request->user();
 
-        $enrolments = Enrolment::with(['section.course', 'section.term', 'section.instructor'])
+        // Match EnrolmentController::index — bypass tenant global scope and scope by
+        // student_id. The global scope can exclude rows when enrolment.tenant_id does
+        // not match TenantContext even though the enrolment belongs to this student.
+        $enrolments = Enrolment::withoutGlobalScope('tenant')
+            ->with(['section.course', 'section.term', 'section.instructor'])
             ->where('student_id', $student->id)
             ->whereIn('status', ['enrolled', 'waitlisted'])
             ->get();
@@ -57,9 +61,11 @@ class StudentDashboardController extends Controller
                         'name' => $section->instructor->name,
                     ],
                     'term' => [
-                        'id'   => $section->term->id,
-                        'name' => $section->term->name,
-                        'type' => $section->term->type,
+                        'id'         => $section->term->id,
+                        'name'       => $section->term->name,
+                        'type'       => $section->term->type,
+                        'starts_at'  => $section->term->starts_at?->toDateString(),
+                        'ends_at'    => $section->term->ends_at?->toDateString(),
                     ],
                 ],
                 'course' => [
@@ -87,7 +93,8 @@ class StudentDashboardController extends Controller
         $student = $request->user();
 
         // Verify student is enrolled in this section
-        $enrolled = Enrolment::where('student_id', $student->id)
+        $enrolled = Enrolment::withoutGlobalScope('tenant')
+            ->where('student_id', $student->id)
             ->where('section_id', $section->id)
             ->where('status', 'enrolled')
             ->exists();
@@ -114,6 +121,9 @@ class StudentDashboardController extends Controller
                         'id'               => $lesson->id,
                         'title'            => $lesson->title,
                         'type'             => $lesson->type,
+                        'body'             => $lesson->body,
+                        'url'              => $lesson->url,
+                        'file_path'        => $lesson->file_path,
                         'order'            => $lesson->order,
                         'duration_seconds' => $lesson->duration_seconds,
                         'progress' => $progress ? [
@@ -133,14 +143,15 @@ class StudentDashboardController extends Controller
     /**
      * POST /api/v1/student/lessons/{lesson}/progress
      *
-     * Update progress for a lesson. Body: { seconds_spent, progress_pct }
-     * For text/pdf/link lessons, send progress_pct=100 to mark complete.
+     * Update progress for a lesson. Body: { seconds_spent?, progress_pct? }
+     * Video lessons: send seconds_spent only — progress_pct is recomputed server-side.
+     * Text/pdf/link lessons: send progress_pct=100 to mark complete.
      */
     public function updateProgress(Request $request, Lesson $lesson): JsonResponse
     {
         $request->validate([
-            'seconds_spent' => ['sometimes', 'integer', 'min:0'],
-            'progress_pct'  => ['required', 'integer', 'min:0', 'max:100'],
+            'seconds_spent' => ['required_without:progress_pct', 'integer', 'min:0'],
+            'progress_pct'  => ['required_without:seconds_spent', 'integer', 'min:0', 'max:100'],
         ]);
 
         $student  = $request->user();
@@ -148,7 +159,7 @@ class StudentDashboardController extends Controller
             $student,
             $lesson,
             $request->integer('seconds_spent', 0),
-            $request->integer('progress_pct')
+            $request->has('progress_pct') ? $request->integer('progress_pct') : null,
         );
 
         return response()->json([

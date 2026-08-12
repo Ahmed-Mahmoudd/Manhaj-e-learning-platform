@@ -45,26 +45,37 @@ class LessonProgressService
     /**
      * Update video/content progress.
      *
-     * @param  int  $secondsSpent  Total seconds spent (cumulative, not delta)
-     * @param  int  $progressPct   0–100 percentage watched/read
+     * @param  int       $secondsSpent  Total seconds spent (cumulative, not delta)
+     * @param  int|null  $progressPct   Client hint for lessons without duration_seconds (text/PDF/link)
      */
     public function updateProgress(
         User $user,
         Lesson $lesson,
         int $secondsSpent,
-        int $progressPct
+        ?int $progressPct = null
     ): LessonProgress {
-        $progressPct = max(0, min(100, $progressPct)); // clamp 0-100
-
         $progress = $this->recordView($user, $lesson);
 
+        $secondsSpent = max($progress->seconds_spent, $secondsSpent);
+
+        // When duration is known, server is the source of truth for percentage.
+        if ($lesson->duration_seconds > 0) {
+            $computedPct = (int) min(100, round($secondsSpent / $lesson->duration_seconds * 100));
+        } elseif ($progressPct !== null) {
+            $computedPct = max(0, min(100, $progressPct));
+        } else {
+            $computedPct = $progress->progress_pct;
+        }
+
+        $finalPct = max($progress->progress_pct, $computedPct);
+
         $data = [
-            'seconds_spent' => max($progress->seconds_spent, $secondsSpent), // never go backwards
-            'progress_pct'  => max($progress->progress_pct, $progressPct),   // never go backwards
+            'seconds_spent' => $secondsSpent,
+            'progress_pct'  => $finalPct,
         ];
 
         // Auto-complete when progress reaches 100%
-        if ($progressPct >= 100 && $progress->completed_at === null) {
+        if ($finalPct >= 100 && $progress->completed_at === null) {
             $data['completed_at'] = now();
         }
 
@@ -83,8 +94,12 @@ class LessonProgressService
     }
 
     /**
-     * Calculate the overall completion percentage for a course section's content
-     * for a given user — how many published lessons have been completed.
+     * Overall course completion for a student.
+     *
+     * Formula: equal weight per published lesson — (completed lessons / total lessons) × 100.
+     * A lesson counts as completed when lesson_progress.completed_at is set (typically at 100%).
+     * We do not weight by duration_seconds because text/PDF/link lessons have no watch time and
+     * course completion should reflect "material covered", not minutes watched.
      *
      * Returns a float 0.0–100.0
      */

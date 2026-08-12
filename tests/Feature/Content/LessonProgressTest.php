@@ -98,16 +98,17 @@ class LessonProgressTest extends TestCase
     public function updating_progress_accumulates_correctly(): void
     {
         ['lesson' => $lesson, 'student' => $student] = $this->setupLesson('video');
+        $lesson->update(['duration_seconds' => 200]);
 
-        // First update: 60 seconds, 30%
-        $progress = $this->service->updateProgress($student, $lesson, 60, 30);
+        // First update: 60 seconds → 30%
+        $progress = $this->service->updateProgress($student, $lesson, 60, null);
         $this->assertEquals(60, $progress->seconds_spent);
         $this->assertEquals(30, $progress->progress_pct);
         $this->assertNull($progress->completed_at);
 
-        // Second update: 120 seconds, 70%
-        $progress = $this->service->updateProgress($student, $lesson, 120, 70);
-        $this->assertEquals(120, $progress->seconds_spent);
+        // Second update: 140 seconds → 70%
+        $progress = $this->service->updateProgress($student, $lesson, 140, null);
+        $this->assertEquals(140, $progress->seconds_spent);
         $this->assertEquals(70, $progress->progress_pct);
     }
 
@@ -115,13 +116,14 @@ class LessonProgressTest extends TestCase
     public function progress_never_goes_backwards(): void
     {
         ['lesson' => $lesson, 'student' => $student] = $this->setupLesson('video');
+        $lesson->update(['duration_seconds' => 400]);
 
-        $this->service->updateProgress($student, $lesson, 300, 80);
+        $this->service->updateProgress($student, $lesson, 320, null);
 
         // Send a lower value (e.g. user rewound) — should not decrease
-        $progress = $this->service->updateProgress($student, $lesson, 10, 5);
+        $progress = $this->service->updateProgress($student, $lesson, 10, null);
 
-        $this->assertEquals(300, $progress->seconds_spent);
+        $this->assertEquals(320, $progress->seconds_spent);
         $this->assertEquals(80, $progress->progress_pct);
     }
 
@@ -129,8 +131,9 @@ class LessonProgressTest extends TestCase
     public function lesson_is_marked_complete_at_100_percent(): void
     {
         ['lesson' => $lesson, 'student' => $student] = $this->setupLesson('video');
+        $lesson->update(['duration_seconds' => 600]);
 
-        $progress = $this->service->updateProgress($student, $lesson, 600, 100);
+        $progress = $this->service->updateProgress($student, $lesson, 600, null);
 
         $this->assertNotNull($progress->completed_at);
         $this->assertEquals(100, $progress->progress_pct);

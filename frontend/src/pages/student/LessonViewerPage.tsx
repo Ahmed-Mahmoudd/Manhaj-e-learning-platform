@@ -60,7 +60,7 @@ export function LessonViewerPage() {
   );
 
   const progressMutation = useMutation({
-    mutationFn: (payload: { progress_pct: number; seconds_spent?: number }) =>
+    mutationFn: (payload: { seconds_spent?: number; progress_pct?: number }) =>
       updateLessonProgress(lid, payload),
     onSuccess: () => {
       setSaveError(null);
@@ -75,8 +75,8 @@ export function LessonViewerPage() {
   });
 
   const saveProgress = useCallback(
-    (progress_pct: number, seconds_spent?: number) => {
-      progressMutation.mutate({ progress_pct, seconds_spent });
+    (payload: { seconds_spent?: number; progress_pct?: number }) => {
+      progressMutation.mutate(payload);
     },
     [progressMutation],
   );
@@ -117,7 +117,13 @@ export function LessonViewerPage() {
                 <button
                   type="button"
                   disabled={progressMutation.isPending}
-                  onClick={() => saveProgress(100, lesson.progress?.seconds_spent ?? 0)}
+                  onClick={() => {
+                    if (lesson.duration_seconds) {
+                      saveProgress({ seconds_spent: lesson.duration_seconds });
+                    } else {
+                      saveProgress({ progress_pct: 100 });
+                    }
+                  }}
                   className="bg-brass px-4 py-2 text-sm text-white transition hover:bg-brass-hover disabled:opacity-60"
                 >
                   {progressMutation.isPending ? t('saving') : t('markComplete')}
@@ -145,7 +151,7 @@ function LessonContent({
   onProgress,
 }: {
   lesson: LessonSummary;
-  onProgress: (pct: number, seconds?: number) => void;
+  onProgress: (payload: { seconds_spent?: number; progress_pct?: number }) => void;
 }) {
   const { t } = useLocale();
 
@@ -157,7 +163,6 @@ function LessonContent({
           embedUrl={embed}
           duration={lesson.duration_seconds}
           initialSeconds={lesson.progress?.seconds_spent ?? 0}
-          initialPct={lesson.progress?.progress_pct ?? 0}
           onProgress={onProgress}
         />
       ) : (
@@ -235,30 +240,41 @@ function VideoPlayer({
   embedUrl,
   duration,
   initialSeconds,
-  initialPct,
   onProgress,
 }: {
   embedUrl: string;
   duration: number | null;
   initialSeconds: number;
-  initialPct: number;
-  onProgress: (pct: number, seconds?: number) => void;
+  onProgress: (payload: { seconds_spent: number }) => void;
 }) {
   const lastSave = useRef(0);
   const secondsRef = useRef(initialSeconds);
 
   useEffect(() => {
+    secondsRef.current = Math.max(secondsRef.current, initialSeconds);
+  }, [initialSeconds]);
+
+  useEffect(() => {
+    if (!duration || duration <= 0) return;
+
     const interval = setInterval(() => {
-      secondsRef.current += 5;
-      const total = duration ?? 600;
-      const pct = Math.min(100, Math.round((secondsRef.current / total) * 100));
-      if (Date.now() - lastSave.current > 15000) {
+      if (document.hidden) return;
+
+      secondsRef.current = Math.min(duration, secondsRef.current + 1);
+
+      if (Date.now() - lastSave.current >= 15000) {
         lastSave.current = Date.now();
-        onProgress(Math.max(initialPct, pct), secondsRef.current);
+        onProgress({ seconds_spent: secondsRef.current });
       }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [duration, initialPct, onProgress]);
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+      if (secondsRef.current > initialSeconds) {
+        onProgress({ seconds_spent: secondsRef.current });
+      }
+    };
+  }, [duration, initialSeconds, onProgress]);
 
   return (
     <div className="aspect-video w-full bg-ink/5">
