@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Instructor;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Grade\EnterGradeRequest;
+use App\Http\Requests\Grade\StoreGradeItemRequest;
 use App\Models\GradeItem;
 use App\Models\Section;
 use App\Models\User;
@@ -50,23 +52,14 @@ class GradeController extends Controller
      * POST /api/v1/instructor/sections/{section}/grade-items
      * Create a new grade item for a section.
      */
-    public function store(Request $request, Section $section): JsonResponse
+    public function store(StoreGradeItemRequest $request, Section $section): JsonResponse
     {
         $this->assertOwns($section, $request->user());
-
-        $validated = $request->validate([
-            'name'      => ['required', 'string', 'max:255'],
-            'type'      => ['required', 'string', 'in:' . implode(',', GradeItem::TYPES)],
-            'max_score' => ['required', 'numeric', 'min:1', 'max:9999'],
-            'weight'    => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'due_at'    => ['nullable', 'date'],
-            'order'     => ['nullable', 'integer', 'min:0'],
-        ]);
 
         $item = GradeItem::create([
             'tenant_id'  => $section->tenant_id,
             'section_id' => $section->id,
-            ...$validated,
+            ...$request->validated(),
         ]);
 
         return response()->json(['grade_item' => $item], 201);
@@ -78,14 +71,11 @@ class GradeController extends Controller
      * POST /api/v1/instructor/grade-items/{item}/grades/{student}
      * Enter or update a grade for a specific student.
      */
-    public function enterGrade(Request $request, GradeItem $item, User $student): JsonResponse
+    public function enterGrade(EnterGradeRequest $request, GradeItem $item, User $student): JsonResponse
     {
         $this->assertOwns($item->section, $request->user());
 
-        $validated = $request->validate([
-            'score'    => ['required', 'numeric', 'min:0'],
-            'feedback' => ['nullable', 'string', 'max:2000'],
-        ]);
+        $validated = $request->validated();
 
         try {
             $grade = $this->gradeService->enterGrade(

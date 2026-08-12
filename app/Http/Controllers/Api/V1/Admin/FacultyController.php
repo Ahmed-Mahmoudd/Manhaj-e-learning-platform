@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Faculty\StoreFacultyRequest;
+use App\Http\Requests\Faculty\UpdateFacultyRequest;
 use App\Models\Faculty;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class FacultyController extends Controller
 {
@@ -15,15 +16,9 @@ class FacultyController extends Controller
         return response()->json(['faculties' => Faculty::withCount('departments')->get()]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreFacultyRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name_en' => ['required', 'string', 'max:255'],
-            'name_ar' => ['nullable', 'string', 'max:255'],
-            'code'    => ['required', 'string', 'max:20'],
-        ]);
-
-        $faculty = Faculty::create(['tenant_id' => TenantContext::require()->id, ...$validated]);
+        $faculty = Faculty::create(['tenant_id' => TenantContext::require()->id, ...$request->validated()]);
 
         return response()->json(['faculty' => $faculty], 201);
     }
@@ -33,13 +28,9 @@ class FacultyController extends Controller
         return response()->json(['faculty' => $faculty->load('departments')]);
     }
 
-    public function update(Request $request, Faculty $faculty): JsonResponse
+    public function update(UpdateFacultyRequest $request, Faculty $faculty): JsonResponse
     {
-        $faculty->update($request->validate([
-            'name_en' => ['sometimes', 'string', 'max:255'],
-            'name_ar' => ['nullable', 'string', 'max:255'],
-            'code'    => ['sometimes', 'string', 'max:20'],
-        ]));
+        $faculty->update($request->validated());
 
         return response()->json(['faculty' => $faculty->fresh()]);
     }

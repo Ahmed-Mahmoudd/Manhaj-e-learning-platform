@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Discussion\AddPostRequest;
+use App\Http\Requests\Discussion\StoreThreadRequest;
 use App\Models\DiscussionPost;
 use App\Models\DiscussionThread;
 use App\Models\Enrolment;
@@ -79,17 +81,11 @@ class DiscussionController extends Controller
     /**
      * POST /api/v1/discuss/sections/{section}/threads
      */
-    public function store(Request $request, Section $section): JsonResponse
+    public function store(StoreThreadRequest $request, Section $section): JsonResponse
     {
         $this->assertAccess($section, $request->user());
 
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'body'  => ['required', 'string'],
-            'type'  => ['required', 'string', 'in:' . implode(',', DiscussionThread::TYPES)],
-        ]);
-
-        $thread = $this->service->createThread($section, $request->user(), $validated);
+        $thread = $this->service->createThread($section, $request->user(), $request->validated());
 
         return response()->json(['thread' => $this->threadSummary($thread->load('author'))], 201);
     }
@@ -99,14 +95,11 @@ class DiscussionController extends Controller
     /**
      * POST /api/v1/discuss/threads/{thread}/posts
      */
-    public function addPost(Request $request, DiscussionThread $thread): JsonResponse
+    public function addPost(AddPostRequest $request, DiscussionThread $thread): JsonResponse
     {
         $this->assertAccess($thread->section, $request->user());
 
-        $validated = $request->validate([
-            'body'           => ['required', 'string'],
-            'parent_post_id' => ['nullable', 'integer', 'exists:discussion_posts,id'],
-        ]);
+        $validated = $request->validated();
 
         try {
             $post = $this->service->reply(

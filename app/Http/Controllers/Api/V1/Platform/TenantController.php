@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Platform;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Tenant\StoreTenantRequest;
+use App\Http\Requests\Tenant\UpdateTenantRequest;
 use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,19 +37,9 @@ class TenantController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreTenantRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name'            => ['required', 'string', 'max:255'],
-            'subdomain'       => ['required', 'string', 'max:100', 'unique:tenants,subdomain', 'regex:/^[a-z0-9\-]+$/'],
-            'locale'          => ['nullable', 'string', 'max:10'],
-            'timezone'        => ['nullable', 'string', 'max:50'],
-            'grading_system'  => ['nullable', 'string', 'in:letter,gpa,percentage'],
-            'is_active'       => ['boolean'],
-            'settings'        => ['nullable', 'array'],
-        ]);
-
-        $tenant = Tenant::create($validated);
+        $tenant = Tenant::create($request->validated());
 
         return response()->json(['tenant' => $this->fmt($tenant)], 201);
     }
@@ -59,17 +51,9 @@ class TenantController extends Controller
         ]);
     }
 
-    public function update(Request $request, Tenant $tenant): JsonResponse
+    public function update(UpdateTenantRequest $request, Tenant $tenant): JsonResponse
     {
-        $validated = $request->validate([
-            'name'           => ['sometimes', 'string', 'max:255'],
-            'locale'         => ['nullable', 'string', 'max:10'],
-            'timezone'       => ['nullable', 'string', 'max:50'],
-            'grading_system' => ['nullable', 'string', 'in:letter,gpa,percentage'],
-            'settings'       => ['nullable', 'array'],
-        ]);
-
-        $tenant->update($validated);
+        $tenant->update($request->validated());
         return response()->json(['tenant' => $this->fmt($tenant->fresh())]);
     }
 

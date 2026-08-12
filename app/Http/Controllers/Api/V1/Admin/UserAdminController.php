@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\StoreUserRequest;
+use App\Http\Requests\User\UpdateUserRoleRequest;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -39,14 +41,9 @@ class UserAdminController extends Controller
         return response()->json(['user' => $this->fmt($user)]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreUserRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', 'unique:users,email'],
-            'role'     => ['required', 'string', 'in:' . implode(',', self::MANAGEABLE_ROLES)],
-            'password' => ['nullable', 'string', 'min:8'],
-        ]);
+        $validated = $request->validated();
 
         $user = User::create([
             'tenant_id' => TenantContext::require()->id,
@@ -59,11 +56,9 @@ class UserAdminController extends Controller
         return response()->json(['user' => $this->fmt($user)], 201);
     }
 
-    public function updateRole(Request $request, User $user): JsonResponse
+    public function updateRole(UpdateUserRoleRequest $request, User $user): JsonResponse
     {
-        $validated = $request->validate([
-            'role' => ['required', 'string', 'in:' . implode(',', self::MANAGEABLE_ROLES)],
-        ]);
+        $validated = $request->validated();
 
         $currentRole = $user->role instanceof Role ? $user->role->value : $user->role;
         if ($currentRole === 'platform_admin') {

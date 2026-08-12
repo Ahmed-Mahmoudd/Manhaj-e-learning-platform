@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Api\V1\Internal;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MlRecommendation\IngestRecommendationsRequest;
+use App\Http\Requests\MlRecommendation\WebhookRequest;
 use App\Models\Recommendation;
-use App\Models\User;
-use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 /**
  * Internal endpoint consumed by the INTERN B FastAPI ML service.
@@ -27,16 +26,9 @@ class MlRecommendationController extends Controller
      *   ]
      * }
      */
-    public function ingest(Request $request): JsonResponse
+    public function ingest(IngestRecommendationsRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'tenant_id'                  => ['required', 'integer', 'exists:tenants,id'],
-            'recommendations'            => ['required', 'array', 'min:1', 'max:500'],
-            'recommendations.*.student_id' => ['required', 'integer', 'exists:users,id'],
-            'recommendations.*.course_id'  => ['required', 'integer', 'exists:courses,id'],
-            'recommendations.*.score'      => ['required', 'numeric', 'min:0', 'max:1'],
-            'recommendations.*.reason'     => ['nullable', 'string', 'max:500'],
-        ]);
+        $validated = $request->validated();
 
         $tenantId = $validated['tenant_id'];
         $upserted = 0;
@@ -68,12 +60,9 @@ class MlRecommendationController extends Controller
      * POST /api/v1/internal/webhook
      * Generic event webhook from INTERN B — log and acknowledge.
      */
-    public function webhook(Request $request): JsonResponse
+    public function webhook(WebhookRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'event'   => ['required', 'string', 'max:100'],
-            'payload' => ['nullable', 'array'],
-        ]);
+        $validated = $request->validated();
 
         // For now: acknowledge. Future: dispatch event-specific jobs.
         \Illuminate\Support\Facades\Log::info('[INTERN-B webhook]', [

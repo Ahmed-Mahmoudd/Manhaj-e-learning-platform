@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Section\StoreSectionRequest;
+use App\Http\Requests\Section\UpdateSectionRequest;
 use App\Models\Section;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -22,19 +24,9 @@ class SectionAdminController extends Controller
         return response()->json(['sections' => $query->get()->map(fn($s) => $this->fmt($s))]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreSectionRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'course_id'        => ['required', 'integer', 'exists:courses,id'],
-            'academic_term_id' => ['required', 'integer', 'exists:academic_terms,id'],
-            'instructor_id'    => ['required', 'integer', 'exists:users,id'],
-            'section_number'   => ['required', 'string', 'max:10'],
-            'capacity'         => ['required', 'integer', 'min:1', 'max:500'],
-            'schedule'         => ['nullable', 'array'],
-            'is_active'        => ['boolean'],
-        ]);
-
-        $section = Section::create(['tenant_id' => TenantContext::require()->id, ...$validated]);
+        $section = Section::create(['tenant_id' => TenantContext::require()->id, ...$request->validated()]);
 
         return response()->json(['section' => $this->fmt($section->load(['course', 'term', 'instructor']))], 201);
     }
@@ -47,15 +39,9 @@ class SectionAdminController extends Controller
         ]);
     }
 
-    public function update(Request $request, Section $section): JsonResponse
+    public function update(UpdateSectionRequest $request, Section $section): JsonResponse
     {
-        $section->update($request->validate([
-            'instructor_id'  => ['sometimes', 'integer', 'exists:users,id'],
-            'section_number' => ['sometimes', 'string', 'max:10'],
-            'capacity'       => ['sometimes', 'integer', 'min:1', 'max:500'],
-            'schedule'       => ['nullable', 'array'],
-            'is_active'      => ['sometimes', 'boolean'],
-        ]));
+        $section->update($request->validated());
         return response()->json(['section' => $this->fmt($section->fresh(['course', 'term', 'instructor']))]);
     }
 

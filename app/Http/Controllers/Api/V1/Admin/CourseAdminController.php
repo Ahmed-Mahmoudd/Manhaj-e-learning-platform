@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Course\StoreCourseRequest;
+use App\Http\Requests\Course\UpdateCourseRequest;
 use App\Models\Course;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -19,19 +21,9 @@ class CourseAdminController extends Controller
         return response()->json(['courses' => $query->withCount('sections')->get()]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreCourseRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'department_id'   => ['required', 'integer', 'exists:departments,id'],
-            'code'            => ['required', 'string', 'max:20'],
-            'title_en'        => ['required', 'string', 'max:255'],
-            'title_ar'        => ['nullable', 'string', 'max:255'],
-            'credit_hours'    => ['required', 'integer', 'min:1', 'max:12'],
-            'description'     => ['nullable', 'string'],
-            'prerequisites'   => ['nullable', 'array'],
-            'prerequisites.*' => ['integer', 'exists:courses,id'],
-        ]);
-
+        $validated = $request->validated();
         $prereqs = $validated['prerequisites'] ?? [];
         unset($validated['prerequisites']);
 
@@ -49,16 +41,9 @@ class CourseAdminController extends Controller
         return response()->json(['course' => $course->load(['department', 'prerequisites', 'sections.term'])]);
     }
 
-    public function update(Request $request, Course $course): JsonResponse
+    public function update(UpdateCourseRequest $request, Course $course): JsonResponse
     {
-        $validated = $request->validate([
-            'title_en'        => ['sometimes', 'string', 'max:255'],
-            'title_ar'        => ['nullable', 'string', 'max:255'],
-            'credit_hours'    => ['sometimes', 'integer', 'min:1', 'max:12'],
-            'description'     => ['nullable', 'string'],
-            'prerequisites'   => ['nullable', 'array'],
-            'prerequisites.*' => ['integer', 'exists:courses,id'],
-        ]);
+        $validated = $request->validated();
 
         if (array_key_exists('prerequisites', $validated)) {
             $course->prerequisites()->sync($validated['prerequisites'] ?? []);

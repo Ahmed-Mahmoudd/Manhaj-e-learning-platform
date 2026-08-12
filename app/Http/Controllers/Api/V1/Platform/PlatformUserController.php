@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Platform;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PlatformUser\StorePlatformUserRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,15 +41,9 @@ class PlatformUserController extends Controller
         return response()->json(['user' => $this->fmt($user->load('tenant'))]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StorePlatformUserRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name'      => ['required', 'string', 'max:255'],
-            'email'     => ['required', 'email', 'unique:users,email'],
-            'role'      => ['required', 'string', 'in:platform_admin,university_admin,instructor,teaching_assistant,student'],
-            'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
-            'password'  => ['nullable', 'string', 'min:8'],
-        ]);
+        $validated = $request->validated();
 
         $user = User::create([
             'name'      => $validated['name'],

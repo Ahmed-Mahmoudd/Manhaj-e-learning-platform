@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Term\StoreTermRequest;
+use App\Http\Requests\Term\UpdateTermRequest;
 use App\Models\AcademicTerm;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class TermController extends Controller
 {
@@ -15,19 +16,12 @@ class TermController extends Controller
         return response()->json(['terms' => AcademicTerm::orderByDesc('start_date')->get()]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreTermRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name'       => ['required', 'string', 'max:100'],
-            'type'       => ['required', 'string', 'in:semester,quarter,trimester,summer'],
-            'starts_at' => ['required', 'date'],
-            'ends_at'   => ['required', 'date', 'after:starts_at'],
-        ]);
-
         $term = AcademicTerm::create([
             'tenant_id' => TenantContext::require()->id,
             'is_active' => false,
-            ...$validated,
+            ...$request->validated(),
         ]);
 
         return response()->json(['term' => $term], 201);
@@ -38,14 +32,9 @@ class TermController extends Controller
         return response()->json(['term' => $term->loadCount('sections')]);
     }
 
-    public function update(Request $request, AcademicTerm $term): JsonResponse
+    public function update(UpdateTermRequest $request, AcademicTerm $term): JsonResponse
     {
-        $term->update($request->validate([
-            'name'       => ['sometimes', 'string', 'max:100'],
-            'type'       => ['sometimes', 'string', 'in:semester,quarter,trimester,summer'],
-            'starts_at' => ['sometimes', 'date'],
-            'ends_at'   => ['sometimes', 'date', 'after:starts_at'],
-        ]));
+        $term->update($request->validated());
         return response()->json(['term' => $term->fresh()]);
     }
 

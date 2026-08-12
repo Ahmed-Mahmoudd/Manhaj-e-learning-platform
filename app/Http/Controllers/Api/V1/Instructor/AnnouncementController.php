@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Instructor;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Announcement\StoreAnnouncementRequest;
 use App\Models\Announcement;
 use App\Models\Section;
 use App\Services\AnnouncementService;
@@ -40,21 +41,14 @@ class AnnouncementController extends Controller
      * POST /api/v1/instructor/sections/{section}/announcements
      * Create and optionally publish an announcement immediately.
      */
-    public function store(Request $request, Section $section): JsonResponse
+    public function store(StoreAnnouncementRequest $request, Section $section): JsonResponse
     {
         $this->assertOwns($section, $request->user());
-
-        $validated = $request->validate([
-            'title'       => ['required', 'string', 'max:255'],
-            'body'        => ['required', 'string'],
-            'type'        => ['required', 'string', 'in:' . implode(',', Announcement::TYPES)],
-            'publish_now' => ['boolean'],
-        ]);
 
         $announcement = $this->service->create(
             $section,
             $request->user(),
-            $validated,
+            $request->validated(),
             $request->boolean('publish_now', true)
         );
 
