@@ -8,9 +8,9 @@ import { useLocale } from '@/i18n/LocaleContext';
 const NAV = [
   { to: '/student', labelKey: 'navMyCourses' as const, end: true },
   { to: '/student/catalogue', labelKey: 'navCatalogue' as const, end: false },
-  { to: '/student/grades', labelKey: 'navGrades' as const, end: false, soon: true },
-  { to: '/student/announcements', labelKey: 'navAnnouncements' as const, end: false, soon: true },
-  { to: '/student/discuss', labelKey: 'navDiscuss' as const, end: false, soon: true },
+  { to: '/student/grades', labelKey: 'navGrades' as const, end: false },
+  { to: '/student/announcements', labelKey: 'navAnnouncements' as const, end: false },
+  { to: '/student/discuss', labelKey: 'navDiscuss' as const, end: false },
 ];
 
 export function StudentShell() {
@@ -43,32 +43,22 @@ export function StudentShell() {
           </div>
         </div>
         <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 pb-0">
-          {NAV.map(({ to, labelKey, end, soon }) =>
-            soon ? (
-              <span
-                key={to}
-                className="cursor-not-allowed border-b-2 border-transparent px-3 py-2 text-sm text-white/35"
-                title={t('comingSoon')}
-              >
-                {t(labelKey)}
-              </span>
-            ) : (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                className={({ isActive }) =>
-                  `border-b-2 px-3 py-2 text-sm transition whitespace-nowrap ${
-                    isActive
-                      ? 'border-brass text-white'
-                      : 'border-transparent text-white/70 hover:text-white'
-                  }`
-                }
-              >
-                {t(labelKey)}
-              </NavLink>
-            ),
-          )}
+          {NAV.map(({ to, labelKey, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `border-b-2 px-3 py-2 text-sm transition whitespace-nowrap ${
+                  isActive
+                    ? 'border-brass text-white'
+                    : 'border-transparent text-white/70 hover:text-white'
+                }`
+              }
+            >
+              {t(labelKey)}
+            </NavLink>
+          ))}
         </nav>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-8">

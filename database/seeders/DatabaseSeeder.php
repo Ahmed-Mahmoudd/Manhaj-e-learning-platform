@@ -4,16 +4,21 @@ namespace Database\Seeders;
 
 use App\Enums\Role;
 use App\Models\AcademicTerm;
+use App\Models\Announcement;
+use App\Models\AnnouncementRead;
 use App\Models\Course;
 use App\Models\Department;
 use App\Models\Enrolment;
 use App\Models\Faculty;
+use App\Models\GradeItem;
 use App\Models\Lesson;
 use App\Models\Module;
 use App\Models\Programme;
 use App\Models\Section;
+use App\Models\StudentGrade;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\DiscussionService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -264,6 +269,202 @@ class DatabaseSeeder extends Seeder
             'duration_seconds' => 900,
         ]);
 
+        $this->seedPublishedGrades($tenant, $section, $instructor, $demoStudent);
+        $this->seedDemoAnnouncements($tenant, $section, $instructor, $demoStudent);
+        $this->seedDemoDiscussion($section, $instructor, $demoStudent, $ta);
+
         $this->command->info("   Seeded: {$tenant->name}");
+    }
+
+    /**
+     * Published grade items + scores for the named demo student (grades UI testing).
+     */
+    private function seedPublishedGrades(
+        Tenant $tenant,
+        Section $section,
+        User $instructor,
+        User $demoStudent,
+    ): void {
+        $items = [
+            [
+                'name'      => 'Assignment 1: Hello Python',
+                'type'      => 'assignment',
+                'max_score' => 100,
+                'weight'    => 20,
+                'order'     => 1,
+                'score'     => 92,
+                'feedback'  => 'Clean code and good variable naming. Watch spacing in loops.',
+            ],
+            [
+                'name'      => 'Quiz 1: Syntax Basics',
+                'type'      => 'quiz',
+                'max_score' => 20,
+                'weight'    => 10,
+                'order'     => 2,
+                'score'     => 18,
+                'feedback'  => null,
+            ],
+            [
+                'name'      => 'Midterm Exam',
+                'type'      => 'midterm',
+                'max_score' => 100,
+                'weight'    => 30,
+                'order'     => 3,
+                'score'     => 88,
+                'feedback'  => 'Strong on control flow; review list comprehensions.',
+            ],
+            [
+                'name'      => 'Final Project',
+                'type'      => 'project',
+                'max_score' => 100,
+                'weight'    => 40,
+                'order'     => 4,
+                'score'     => 95,
+                'feedback'  => 'Excellent capstone — well-structured modules and tests.',
+            ],
+        ];
+
+        foreach ($items as $row) {
+            $item = GradeItem::create([
+                'tenant_id'    => $tenant->id,
+                'section_id'   => $section->id,
+                'name'         => $row['name'],
+                'type'         => $row['type'],
+                'max_score'    => $row['max_score'],
+                'weight'       => $row['weight'],
+                'order'        => $row['order'],
+                'is_published' => true,
+            ]);
+
+            StudentGrade::create([
+                'tenant_id'     => $tenant->id,
+                'grade_item_id' => $item->id,
+                'student_id'    => $demoStudent->id,
+                'graded_by'     => $instructor->id,
+                'score'         => $row['score'],
+                'feedback'      => $row['feedback'],
+                'is_published'  => true,
+                'graded_at'     => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Published announcements for the demo student's enrolled section (announcements UI testing).
+     */
+    private function seedDemoAnnouncements(
+        Tenant $tenant,
+        Section $section,
+        User $instructor,
+        User $demoStudent,
+    ): void {
+        $rows = [
+            [
+                'type'         => 'urgent',
+                'title'        => 'Thursday lab moved to Room B204',
+                'body'         => "This week's lab session on Thursday has been moved from A101 to **B204** due to maintenance.\n\nPlease arrive 10 minutes early so we can start on time. Bring your laptop and the Week 3 worksheet.",
+                'published_at' => now()->subHours(3),
+                'mark_read'    => false,
+            ],
+            [
+                'type'         => 'assignment',
+                'title'        => 'Assignment 2 posted — due Oct 18',
+                'body'         => "Assignment 2: Functions & Loops is now available under Module 2.\n\n- Submit a single `.py` file via the course portal\n- Due: **Oct 18, 11:59 PM**\n- Late submissions lose 10% per day\n\nOffice hours: Sunday 2–4 PM if you need help.",
+                'published_at' => now()->subDays(1),
+                'mark_read'    => false,
+            ],
+            [
+                'type'         => 'exam',
+                'title'        => 'Midterm exam — scope & format',
+                'body'         => "The midterm covers Modules 1–2 (variables, types, control flow, functions).\n\n**Format:** 60 minutes, closed book, one handwritten cheat sheet (A4, both sides).\n\nSample questions will be posted next week. Review Lectures 1–6 and Lab 1–3.",
+                'published_at' => now()->subDays(3),
+                'mark_read'    => true,
+            ],
+            [
+                'type'         => 'general',
+                'title'        => 'Welcome to Introduction to Programming',
+                'body'         => "Welcome to the course! This term we'll use Python 3.12.\n\nPlease install VS Code + the Python extension before our first lab. Join the section forum if you have questions — TAs monitor it daily.\n\nGood luck!",
+                'published_at' => now()->subWeeks(2),
+                'mark_read'    => true,
+            ],
+            [
+                'type'         => 'general',
+                'title'        => 'Course materials available on the portal',
+                'body'         => "All lecture slides, lab sheets, and recorded sessions are under **My courses → Section lessons**.\n\nNew content unlocks each Sunday at 8 AM. Let us know if anything is missing.",
+                'published_at' => now()->subWeeks(1),
+                'mark_read'    => false,
+            ],
+        ];
+
+        foreach ($rows as $row) {
+            $announcement = Announcement::create([
+                'tenant_id'    => $tenant->id,
+                'section_id'   => $section->id,
+                'author_id'    => $instructor->id,
+                'type'         => $row['type'],
+                'title'        => $row['title'],
+                'body'         => $row['body'],
+                'is_published' => true,
+                'published_at' => $row['published_at'],
+            ]);
+
+            if ($row['mark_read']) {
+                AnnouncementRead::create([
+                    'announcement_id' => $announcement->id,
+                    'user_id'         => $demoStudent->id,
+                    'read_at'         => $row['published_at']->copy()->addHours(2),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Sample forum threads for the demo section (discussion UI testing).
+     */
+    private function seedDemoDiscussion(
+        Section $section,
+        User $instructor,
+        User $demoStudent,
+        User $ta,
+    ): void {
+        $discussion = app(DiscussionService::class);
+
+        $question = $discussion->createThread($section, $demoStudent, [
+            'type'  => 'question',
+            'title' => 'How do I submit Assignment 1?',
+            'body'  => 'I finished Hello Python but I cannot find the upload link. Do we submit on the portal or by email?',
+        ]);
+        $discussion->togglePin($question);
+
+        $answer = $discussion->reply(
+            $question,
+            $instructor,
+            'Upload via **My courses → Section lessons → Assignment 1**. Use a single `.py` file named `a1_yourid.py`. Email submissions are not accepted.',
+        );
+        $discussion->markAnswer($answer);
+
+        $discussion->reply(
+            $question,
+            $ta,
+            'If the upload button is missing, try a hard refresh. I can help in office hours Sunday 2 PM.',
+        );
+
+        $studyGroup = $discussion->createThread($section, $ta, [
+            'type'  => 'general',
+            'title' => 'Study group for midterm prep',
+            'body'  => 'Planning a review session this Saturday 3 PM in the library. Reply if you want to join — we will cover loops, functions, and past quiz questions.',
+        ]);
+
+        $discussion->reply(
+            $studyGroup,
+            $demoStudent,
+            'Count me in! Can we also go over list comprehensions?',
+        );
+
+        $discussion->createThread($section, $instructor, [
+            'type'  => 'resource',
+            'title' => 'Official Python 3.12 documentation',
+            'body'  => "Bookmark these while working on assignments:\n\nhttps://docs.python.org/3/\n\nThe tutorial sections on data structures and modules are especially useful for Assignment 2.",
+        ]);
     }
 }

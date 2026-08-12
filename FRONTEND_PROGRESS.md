@@ -42,6 +42,20 @@ Login, token storage, `X-Tenant-ID`, role guards, AR/EN RTL, placeholder homes f
 
 **Tests:** 200 passing. Frontend `npm run build` OK.
 
+### Student — Grades view (item 2, part C)
+- `/student/grades` — published grades grouped by enrolled section; overall letter + weighted %; item table with score, letter, weight, feedback.
+- **Demo grades:** `student@cut.manhaj.app` has 4 published items on CS101 (weighted overall ≈ **A- / 91.8%**). Re-seed with `php artisan migrate:fresh --seed`.
+
+### Student — Announcements (item 2, part D)
+- `/student/announcements` — feed from enrolled sections; unread badge; expand to read body; auto mark-read on expand.
+- **Demo announcements:** `student@cut.manhaj.app` sees **5 published items** on CS101 (3 unread, 2 read). Re-seed with `php artisan migrate:fresh --seed`.
+
+### Student — Discussion (item 2, part E)
+- `/student/discuss` — section picker (enrolled only)
+- `/student/discuss/sections/:id` — thread list + new thread form (general / question / resource)
+- `/student/discuss/sections/:id/threads/:id` — thread detail, replies, upvote toggle
+- **Demo threads:** pinned resolved question + study group + resource link on CS101 section.
+
 **Run:** `php artisan serve` + `cd frontend && npm run dev` → `student@cut.manhaj.app` / `password`
 
 ---
@@ -54,9 +68,7 @@ Login, token storage, `X-Tenant-ID`, role guards, AR/EN RTL, placeholder homes f
 
 ## NOT STARTED (Student item 2 remainder)
 
-- Grades view (`GET /student/grades`)
-- Announcements feed + mark read
-- Discussion threads
+- (none — student item 2 complete)
 
 ## NOT STARTED (later items)
 
@@ -64,4 +76,4 @@ Login, token storage, `X-Tenant-ID`, role guards, AR/EN RTL, placeholder homes f
 4. **University Admin:** CRUD data tables
 5. **Platform Admin:** tenant CRUD, stats
 
-**Next session:** Layout plan for **Grades view** in this file; read `StudentGradeController`; build `/student/grades`.
+**Next session:** **Instructor shell** — sections roster, grading, announcements authoring.

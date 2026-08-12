@@ -9,6 +9,11 @@ import { MyCoursesPage } from '@/pages/student/MyCoursesPage';
 import { CataloguePage } from '@/pages/student/CataloguePage';
 import { CourseDetailPage } from '@/pages/student/CourseDetailPage';
 import { SectionLessonsPage } from '@/pages/student/SectionLessonsPage';
+import { GradesPage } from '@/pages/student/GradesPage';
+import { AnnouncementsPage } from '@/pages/student/AnnouncementsPage';
+import { DiscussSectionsPage } from '@/pages/student/DiscussSectionsPage';
+import { DiscussThreadsPage } from '@/pages/student/DiscussThreadsPage';
+import { DiscussThreadPage } from '@/pages/student/DiscussThreadPage';
 import { GuestRoute, ProtectedRoute } from '@/routes/guards';
 
 function RootRedirect() {
@@ -38,6 +43,14 @@ export function AppRoutes() {
           <Route path="/student" element={<MyCoursesPage />} />
           <Route path="/student/catalogue" element={<CataloguePage />} />
           <Route path="/student/catalogue/:courseId" element={<CourseDetailPage />} />
+          <Route path="/student/grades" element={<GradesPage />} />
+          <Route path="/student/announcements" element={<AnnouncementsPage />} />
+          <Route path="/student/discuss" element={<DiscussSectionsPage />} />
+          <Route path="/student/discuss/sections/:sectionId" element={<DiscussThreadsPage />} />
+          <Route
+            path="/student/discuss/sections/:sectionId/threads/:threadId"
+            element={<DiscussThreadPage />}
+          />
           <Route path="/student/sections/:sectionId" element={<SectionLessonsPage />} />
           <Route
             path="/student/sections/:sectionId/lessons/:lessonId"
