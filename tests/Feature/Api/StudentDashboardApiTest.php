@@ -283,6 +283,79 @@ class StudentDashboardApiTest extends TestCase
     }
 
     #[Test]
+    public function course_completion_pct_is_equal_weight_per_lesson(): void
+    {
+        ['tenant' => $tenant, 'student' => $student, 'course' => $course, 'module' => $module, 'lesson' => $l1] =
+            $this->buildTenantWithEnrolledStudent();
+
+        $l2 = Lesson::factory()->create([
+            'tenant_id' => $tenant->id, 'module_id' => $module->id, 'order' => 2, 'is_published' => true,
+        ]);
+        $l3 = Lesson::factory()->create([
+            'tenant_id' => $tenant->id, 'module_id' => $module->id, 'order' => 3, 'is_published' => true,
+        ]);
+        $l4 = Lesson::factory()->create([
+            'tenant_id' => $tenant->id, 'module_id' => $module->id, 'order' => 4, 'is_published' => true,
+        ]);
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->postJson("/api/v1/student/lessons/{$l1->id}/progress", ['progress_pct' => 100])
+             ->assertOk();
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->postJson("/api/v1/student/lessons/{$l2->id}/progress", ['progress_pct' => 100])
+             ->assertOk();
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->getJson('/api/v1/student/courses')
+             ->assertOk()
+             ->assertJsonPath('courses.0.course.id', $course->id)
+             ->assertJsonPath('courses.0.completion_pct', 50);
+    }
+
+    #[Test]
+    public function updating_lesson_progress_updates_course_completion_pct(): void
+    {
+        ['tenant' => $tenant, 'student' => $student, 'module' => $module, 'lesson' => $l1] =
+            $this->buildTenantWithEnrolledStudent();
+
+        $l2 = Lesson::factory()->create([
+            'tenant_id' => $tenant->id, 'module_id' => $module->id, 'order' => 2, 'is_published' => true,
+        ]);
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->getJson('/api/v1/student/courses')
+             ->assertOk()
+             ->assertJsonPath('courses.0.completion_pct', 0);
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->postJson("/api/v1/student/lessons/{$l1->id}/progress", ['progress_pct' => 100])
+             ->assertOk();
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->getJson('/api/v1/student/courses')
+             ->assertOk()
+             ->assertJsonPath('courses.0.completion_pct', 50);
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->postJson("/api/v1/student/lessons/{$l2->id}/progress", ['progress_pct' => 100])
+             ->assertOk();
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->getJson('/api/v1/student/courses')
+             ->assertOk()
+             ->assertJsonPath('courses.0.completion_pct', 100);
+    }
+
+    #[Test]
     public function progress_validation_rejects_out_of_range_pct(): void
     {
         ['tenant' => $tenant, 'student' => $student, 'lesson' => $lesson] =
