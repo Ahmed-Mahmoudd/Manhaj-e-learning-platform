@@ -28,9 +28,19 @@ Login, token storage, `X-Tenant-ID`, role guards, AR/EN RTL, placeholder homes f
 
 **FIX 3 — video progress stuck at ~8%:** Root cause was a fake +5s/5s interval sending a stale client `progress_pct` (YouTube iframe cannot expose `currentTime`). Backend now recomputes `progress_pct = min(100, seconds_spent / duration_seconds × 100)` when `duration_seconds > 0`; frontend video tracking sends only `seconds_spent` (1s wall-clock ticks while tab visible). Feature test: 25% / 50% / 100% at 400s duration.
 
-**FIX 4 — course completion aggregation:** Confirmed `LessonProgressService::courseCompletionPct()` — equal weight per published lesson (`completed_at` set / total published lessons). Documented in service comment. Feature tests: 4 lessons, 2 complete → 50%; POST progress updates next GET `/student/courses`.
+**FIX 4 — course completion aggregation:** `courseCompletionPct()` averages each lesson's `progress_pct` (equal weight; no record = 0%). Partial progress counts — not binary completed/not.
 
-**Tests:** 198 passing (497 assertions). Frontend `npm run build` OK.
+**BUG 4 — Mark complete / last_position_seconds:** Orphan `last_position_seconds` removed entirely (never shipped).
+
+**BUG 5 — PDF opens My courses:** Storage links use `storageFileUrl()` → Laravel origin via `VITE_API_URL` / dev default.
+
+**BUG 3 — LessonViewerPage infinite re-render:** Stable `saveProgress` via mutate ref; `ErrorBoundary` added.
+
+**Video lessons (architecture):** YouTube uses the **IFrame Player API** (`enablejsapi: 1`). Progress is **position-based**: `progress_pct = currentTime ÷ duration × 100`. Seek to hour 3 of a 4-hour video → 75% immediately. Uses YouTube `getDuration()` when available for accurate %. `seconds_spent` stores playback position (resume point). Polls every ~2s + on seek/pause; player does not remount on save. Direct `.mp4`/`.webm` use HTML5 `<video>`.
+
+**Course completion_pct:** Average of each published lesson's `progress_pct` (equal weight; missing progress = 0%). Backend recomputes lesson `progress_pct` from `seconds_spent / duration_seconds`; keep `duration_seconds` aligned with the embed length for accurate bars on long YouTube videos.
+
+**Tests:** 200 passing. Frontend `npm run build` OK.
 
 **Run:** `php artisan serve` + `cd frontend && npm run dev` → `student@cut.manhaj.app` / `password`
 

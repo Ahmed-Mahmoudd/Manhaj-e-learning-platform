@@ -52,22 +52,37 @@ class LessonProgressService
         User $user,
         Lesson $lesson,
         int $secondsSpent,
-        ?int $progressPct = null
+        ?int $progressPct = null,
     ): LessonProgress {
         $progress = $this->recordView($user, $lesson);
 
-        $secondsSpent = max($progress->seconds_spent, $secondsSpent);
+        if ($lesson->isVideo()) {
+            // Video: position-based — progress follows the scrubber (can go up or down).
+            $secondsSpent = max(0, $secondsSpent);
 
-        // When duration is known, server is the source of truth for percentage.
-        if ($lesson->duration_seconds > 0) {
-            $computedPct = (int) min(100, round($secondsSpent / $lesson->duration_seconds * 100));
-        } elseif ($progressPct !== null) {
-            $computedPct = max(0, min(100, $progressPct));
+            if ($progressPct !== null) {
+                $finalPct = max(0, min(100, $progressPct));
+                if ($finalPct >= 100 && $lesson->duration_seconds > 0) {
+                    $secondsSpent = $lesson->duration_seconds;
+                }
+            } elseif ($lesson->duration_seconds > 0) {
+                $finalPct = (int) min(100, round($secondsSpent / $lesson->duration_seconds * 100));
+            } else {
+                $finalPct = $progress->progress_pct;
+            }
         } else {
-            $computedPct = $progress->progress_pct;
-        }
+            $secondsSpent = max($progress->seconds_spent, $secondsSpent);
 
-        $finalPct = max($progress->progress_pct, $computedPct);
+            if ($lesson->duration_seconds > 0) {
+                $computedPct = (int) min(100, round($secondsSpent / $lesson->duration_seconds * 100));
+            } elseif ($progressPct !== null) {
+                $computedPct = max(0, min(100, $progressPct));
+            } else {
+                $computedPct = $progress->progress_pct;
+            }
+
+            $finalPct = max($progress->progress_pct, $computedPct);
+        }
 
         $data = [
             'seconds_spent' => $secondsSpent,
@@ -85,45 +100,61 @@ class LessonProgressService
     }
 
     /**
+     * Reset lesson progress to zero so the student can start again.
+     */
+    public function resetProgress(User $user, Lesson $lesson): LessonProgress
+    {
+        $progress = $this->recordView($user, $lesson);
+
+        $progress->update([
+            'seconds_spent' => 0,
+            'progress_pct'  => 0,
+            'completed_at'  => null,
+        ]);
+
+        return $progress->fresh();
+    }
+
+    /**
      * Mark a lesson as manually completed (e.g. text/PDF/link lessons).
      * For these types, there is no percentage — the student marks it done.
      */
     public function markComplete(User $user, Lesson $lesson): LessonProgress
     {
-        return $this->updateProgress($user, $lesson, 0, 100);
+        $seconds = ($lesson->isVideo() && $lesson->duration_seconds > 0)
+            ? $lesson->duration_seconds
+            : 0;
+
+        return $this->updateProgress($user, $lesson, $seconds, 100);
     }
 
     /**
      * Overall course completion for a student.
      *
-     * Formula: equal weight per published lesson — (completed lessons / total lessons) × 100.
-     * A lesson counts as completed when lesson_progress.completed_at is set (typically at 100%).
-     * We do not weight by duration_seconds because text/PDF/link lessons have no watch time and
-     * course completion should reflect "material covered", not minutes watched.
+     * Formula: average of each published lesson's progress_pct (equal weight per lesson).
+     * Lessons with no progress record count as 0%. Partial video/text progress therefore
+     * moves the course bar proportionally — not only fully-completed lessons.
      *
      * Returns a float 0.0–100.0
      */
     public function courseCompletionPct(User $user, int $courseId): float
     {
-        // All published lessons in this course
-        $total = Lesson::withoutGlobalScope('tenant')
-            ->whereHas('module', fn($q) => $q->where('course_id', $courseId)->where('is_published', true))
+        $lessonIds = Lesson::withoutGlobalScope('tenant')
+            ->whereHas('module', fn ($q) => $q->where('course_id', $courseId)->where('is_published', true))
             ->where('is_published', true)
-            ->count();
+            ->pluck('id');
 
-        if ($total === 0) {
+        if ($lessonIds->isEmpty()) {
             return 0.0;
         }
 
-        $completed = LessonProgress::withoutGlobalScope('tenant')
+        $progressByLesson = LessonProgress::withoutGlobalScope('tenant')
             ->where('user_id', $user->id)
-            ->whereNotNull('completed_at')
-            ->whereHas('lesson', fn($q) =>
-                $q->where('is_published', true)
-                  ->whereHas('module', fn($q2) => $q2->where('course_id', $courseId))
-            )
-            ->count();
+            ->whereIn('lesson_id', $lessonIds)
+            ->pluck('progress_pct', 'lesson_id');
 
-        return round(($completed / $total) * 100, 1);
+        $sum = $lessonIds->sum(fn ($lessonId) => (int) ($progressByLesson[$lessonId] ?? 0));
+
+        return round($sum / $lessonIds->count(), 1);
     }
 }

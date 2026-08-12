@@ -247,7 +247,7 @@ class StudentDashboardApiTest extends TestCase
     }
 
     #[Test]
-    public function progress_pct_is_recomputed_from_seconds_for_video_lessons(): void
+    public function video_progress_uses_client_pct_or_position_over_duration(): void
     {
         ['tenant' => $tenant, 'student' => $student, 'lesson' => $lesson] =
             $this->buildTenantWithEnrolledStudent();
@@ -258,11 +258,11 @@ class StudentDashboardApiTest extends TestCase
              ->withHeaders(['X-Tenant-ID' => $tenant->id])
              ->postJson("/api/v1/student/lessons/{$lesson->id}/progress", [
                  'seconds_spent' => 100,
-                 'progress_pct'  => 8, // stale client value — ignored when duration is set
+                 'progress_pct'  => 75, // embed duration may differ from DB — client pct wins
              ])
              ->assertOk()
              ->assertJsonPath('progress.seconds_spent', 100)
-             ->assertJsonPath('progress.progress_pct', 25);
+             ->assertJsonPath('progress.progress_pct', 75);
 
         $this->actingAs($student, 'sanctum')
              ->withHeaders(['X-Tenant-ID' => $tenant->id])
@@ -276,10 +276,41 @@ class StudentDashboardApiTest extends TestCase
              ->withHeaders(['X-Tenant-ID' => $tenant->id])
              ->postJson("/api/v1/student/lessons/{$lesson->id}/progress", [
                  'seconds_spent' => 400,
+                 'progress_pct'  => 100,
              ])
              ->assertOk()
              ->assertJsonPath('progress.progress_pct', 100)
              ->assertJsonPath('progress.completed_at', fn ($v) => $v !== null);
+    }
+
+    #[Test]
+    public function course_completion_pct_averages_lesson_progress_pct(): void
+    {
+        ['tenant' => $tenant, 'student' => $student, 'course' => $course, 'module' => $module, 'lesson' => $l1] =
+            $this->buildTenantWithEnrolledStudent();
+
+        Lesson::factory()->create([
+            'tenant_id' => $tenant->id, 'module_id' => $module->id, 'order' => 2, 'is_published' => true,
+        ]);
+        Lesson::factory()->create([
+            'tenant_id' => $tenant->id, 'module_id' => $module->id, 'order' => 3, 'is_published' => true,
+        ]);
+        Lesson::factory()->create([
+            'tenant_id' => $tenant->id, 'module_id' => $module->id, 'order' => 4, 'is_published' => true,
+        ]);
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->postJson("/api/v1/student/lessons/{$l1->id}/progress", ['progress_pct' => 80])
+             ->assertOk()
+             ->assertJsonPath('progress.progress_pct', 80);
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->getJson('/api/v1/student/courses')
+             ->assertOk()
+             ->assertJsonPath('courses.0.course.id', $course->id)
+             ->assertJsonPath('courses.0.completion_pct', 20);
     }
 
     #[Test]
@@ -319,12 +350,14 @@ class StudentDashboardApiTest extends TestCase
     #[Test]
     public function updating_lesson_progress_updates_course_completion_pct(): void
     {
-        ['tenant' => $tenant, 'student' => $student, 'module' => $module, 'lesson' => $l1] =
+        ['tenant' => $tenant, 'student' => $student, 'course' => $course, 'module' => $module, 'lesson' => $l1] =
             $this->buildTenantWithEnrolledStudent();
 
         $l2 = Lesson::factory()->create([
             'tenant_id' => $tenant->id, 'module_id' => $module->id, 'order' => 2, 'is_published' => true,
         ]);
+
+        $l1->update(['type' => 'video', 'duration_seconds' => 500]);
 
         $this->actingAs($student, 'sanctum')
              ->withHeaders(['X-Tenant-ID' => $tenant->id])
@@ -334,14 +367,15 @@ class StudentDashboardApiTest extends TestCase
 
         $this->actingAs($student, 'sanctum')
              ->withHeaders(['X-Tenant-ID' => $tenant->id])
-             ->postJson("/api/v1/student/lessons/{$l1->id}/progress", ['progress_pct' => 100])
-             ->assertOk();
+             ->postJson("/api/v1/student/lessons/{$l1->id}/progress", ['seconds_spent' => 400])
+             ->assertOk()
+             ->assertJsonPath('progress.progress_pct', 80);
 
         $this->actingAs($student, 'sanctum')
              ->withHeaders(['X-Tenant-ID' => $tenant->id])
              ->getJson('/api/v1/student/courses')
              ->assertOk()
-             ->assertJsonPath('courses.0.completion_pct', 50);
+             ->assertJsonPath('courses.0.completion_pct', 40);
 
         $this->actingAs($student, 'sanctum')
              ->withHeaders(['X-Tenant-ID' => $tenant->id])
@@ -352,7 +386,7 @@ class StudentDashboardApiTest extends TestCase
              ->withHeaders(['X-Tenant-ID' => $tenant->id])
              ->getJson('/api/v1/student/courses')
              ->assertOk()
-             ->assertJsonPath('courses.0.completion_pct', 100);
+             ->assertJsonPath('courses.0.completion_pct', 90);
     }
 
     #[Test]
@@ -368,5 +402,28 @@ class StudentDashboardApiTest extends TestCase
              ])
              ->assertUnprocessable()
              ->assertJsonValidationErrors(['progress_pct']);
+    }
+
+    #[Test]
+    public function student_can_reset_lesson_progress_at_completion(): void
+    {
+        ['tenant' => $tenant, 'student' => $student, 'lesson' => $lesson] =
+            $this->buildTenantWithEnrolledStudent();
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->postJson("/api/v1/student/lessons/{$lesson->id}/progress", [
+                 'progress_pct' => 100,
+             ])
+             ->assertOk()
+             ->assertJsonPath('progress.progress_pct', 100);
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->postJson("/api/v1/student/lessons/{$lesson->id}/progress/reset")
+             ->assertOk()
+             ->assertJsonPath('progress.seconds_spent', 0)
+             ->assertJsonPath('progress.progress_pct', 0)
+             ->assertJsonPath('progress.completed_at', null);
     }
 }

@@ -113,18 +113,57 @@ class LessonProgressTest extends TestCase
     }
 
     #[Test]
-    public function progress_never_goes_backwards(): void
+    public function video_progress_follows_playback_position(): void
     {
         ['lesson' => $lesson, 'student' => $student] = $this->setupLesson('video');
-        $lesson->update(['duration_seconds' => 400]);
+        $lesson->update(['duration_seconds' => 14_400]); // 4 hours
 
-        $this->service->updateProgress($student, $lesson, 320, null);
+        $this->service->updateProgress($student, $lesson, 10_800, 75); // 3 hours in
 
-        // Send a lower value (e.g. user rewound) — should not decrease
-        $progress = $this->service->updateProgress($student, $lesson, 10, null);
+        // Rewind scrubber — progress should decrease
+        $progress = $this->service->updateProgress($student, $lesson, 3_600, 25);
 
-        $this->assertEquals(320, $progress->seconds_spent);
+        $this->assertEquals(3_600, $progress->seconds_spent);
+        $this->assertEquals(25, $progress->progress_pct);
+    }
+
+    #[Test]
+    public function non_video_progress_never_goes_backwards(): void
+    {
+        ['lesson' => $lesson, 'student' => $student] = $this->setupLesson('text');
+
+        $this->service->updateProgress($student, $lesson, 0, 80);
+
+        $progress = $this->service->updateProgress($student, $lesson, 0, 10);
+
         $this->assertEquals(80, $progress->progress_pct);
+    }
+
+    #[Test]
+    public function reset_progress_clears_completion(): void
+    {
+        ['lesson' => $lesson, 'student' => $student] = $this->setupLesson('video');
+        $lesson->update(['duration_seconds' => 600]);
+
+        $this->service->updateProgress($student, $lesson, 600, 100);
+        $progress = $this->service->resetProgress($student, $lesson);
+
+        $this->assertEquals(0, $progress->seconds_spent);
+        $this->assertEquals(0, $progress->progress_pct);
+        $this->assertNull($progress->completed_at);
+    }
+
+    #[Test]
+    public function marking_video_complete_sets_position_to_duration(): void
+    {
+        ['lesson' => $lesson, 'student' => $student] = $this->setupLesson('video');
+        $lesson->update(['duration_seconds' => 3_600]);
+
+        $progress = $this->service->updateProgress($student, $lesson, 0, 100);
+
+        $this->assertEquals(3_600, $progress->seconds_spent);
+        $this->assertEquals(100, $progress->progress_pct);
+        $this->assertNotNull($progress->completed_at);
     }
 
     #[Test]
@@ -162,14 +201,35 @@ class LessonProgressTest extends TestCase
         $l2 = Lesson::factory()->create(['tenant_id' => $tenant->id, 'module_id' => $module->id]);
         $l3 = Lesson::factory()->create(['tenant_id' => $tenant->id, 'module_id' => $module->id]);
 
-        // Complete 2 of 3
+        // Complete 2 of 3 at 100%; third has no record (0%)
         $this->service->markComplete($student, $l1);
         $this->service->markComplete($student, $l2);
 
         $pct = $this->service->courseCompletionPct($student, $course->id);
 
-        // 2 out of 3 = 66.7%
+        // (100 + 100 + 0) / 3 = 66.7%
         $this->assertEquals(66.7, $pct);
+    }
+
+    #[Test]
+    public function course_completion_pct_averages_partial_progress(): void
+    {
+        ['course' => $course, 'module' => $module, 'lesson' => $l1, 'student' => $student, 'tenant' => $tenant] =
+            $this->setupLesson('video');
+
+        $l1->update(['duration_seconds' => 100, 'is_published' => true]);
+        $module->update(['is_published' => true]);
+
+        $l2 = Lesson::factory()->create([
+            'tenant_id' => $tenant->id, 'module_id' => $module->id, 'is_published' => true,
+        ]);
+
+        $this->service->updateProgress($student, $l1, 80, null);
+
+        $pct = $this->service->courseCompletionPct($student, $course->id);
+
+        // (80 + 0) / 2 = 40%
+        $this->assertEquals(40.0, $pct);
     }
 
     #[Test]

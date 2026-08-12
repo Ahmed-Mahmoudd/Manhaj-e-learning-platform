@@ -211,7 +211,28 @@ class EnrolmentApiTest extends TestCase
              ->withHeaders($this->h($tenant))
              ->postJson("/api/v1/student/sections/{$section->id}/enrol")
              ->assertUnprocessable()
-             ->assertJsonPath('message', 'Student is already enrolled or waitlisted in this section.');
+             ->assertJsonPath('message', 'You are already enrolled in this section.');
+    }
+
+    #[Test]
+    public function enrolling_twice_does_not_return_server_error(): void
+    {
+        ['tenant' => $tenant, 'student' => $student, 'section' => $section] = $this->scaffold(30);
+
+        Enrolment::create([
+            'tenant_id'   => $tenant->id,
+            'student_id'  => $student->id,
+            'section_id'  => $section->id,
+            'status'      => 'enrolled',
+            'enrolled_at' => now(),
+        ]);
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders($this->h($tenant))
+             ->postJson("/api/v1/student/sections/{$section->id}/enrol")
+             ->assertUnprocessable()
+             ->assertJsonMissing(['exception'])
+             ->assertJsonPath('message', 'You are already enrolled in this section.');
     }
 
     #[Test]

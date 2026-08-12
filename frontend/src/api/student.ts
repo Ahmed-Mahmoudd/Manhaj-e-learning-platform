@@ -23,6 +23,12 @@ export function updateLessonProgress(
   });
 }
 
+export function resetLessonProgress(lessonId: number) {
+  return apiRequest<UpdateProgressResponse>(`/student/lessons/${lessonId}/progress/reset`, {
+    method: 'POST',
+  });
+}
+
 export const studentKeys = {
   all: ['student'] as const,
   courses: () => [...studentKeys.all, 'courses'] as const,

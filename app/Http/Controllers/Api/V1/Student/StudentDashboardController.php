@@ -144,7 +144,7 @@ class StudentDashboardController extends Controller
      * POST /api/v1/student/lessons/{lesson}/progress
      *
      * Update progress for a lesson. Body: { seconds_spent?, progress_pct? }
-     * Video lessons: send seconds_spent only — progress_pct is recomputed server-side.
+     * Video lessons: send seconds_spent — progress_pct is recomputed server-side.
      * Text/pdf/link lessons: send progress_pct=100 to mark complete.
      */
     public function updateProgress(Request $request, Lesson $lesson): JsonResponse
@@ -161,6 +161,26 @@ class StudentDashboardController extends Controller
             $request->integer('seconds_spent', 0),
             $request->has('progress_pct') ? $request->integer('progress_pct') : null,
         );
+
+        return response()->json([
+            'progress' => [
+                'lesson_id'     => $lesson->id,
+                'seconds_spent' => $progress->seconds_spent,
+                'progress_pct'  => $progress->progress_pct,
+                'completed_at'  => $progress->completed_at,
+            ],
+        ]);
+    }
+
+    /**
+     * POST /api/v1/student/lessons/{lesson}/progress/reset
+     *
+     * Clears progress so the student can start the lesson again from the beginning.
+     */
+    public function resetProgress(Request $request, Lesson $lesson): JsonResponse
+    {
+        $student  = $request->user();
+        $progress = $this->progressService->resetProgress($student, $lesson);
 
         return response()->json([
             'progress' => [

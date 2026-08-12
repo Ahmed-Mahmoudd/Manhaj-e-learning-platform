@@ -1,17 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/api/client';
+import { storageFileUrl } from '@/api/config';
 import {
   fetchSectionLessons,
+  resetLessonProgress,
   studentKeys,
   updateLessonProgress,
 } from '@/api/student';
 import { AsyncPanel } from '@/components/AsyncPanel';
+import { LessonVideoPlayer, type LessonVideoPlayerHandle } from '@/components/LessonVideoPlayer';
 import { ProgressBar } from '@/components/ProgressBar';
 import { useLocale } from '@/i18n/LocaleContext';
 import { lessonTypeLabel } from '@/utils/lessonType';
-import type { LessonSummary } from '@/types/student';
+import { resolveVideoSource } from '@/utils/videoSource';
+import type { LessonSummary, SectionLessonsResponse } from '@/types/student';
 
 function findLesson(
   modules: { lessons: LessonSummary[] }[] | undefined,
@@ -25,21 +29,6 @@ function findLesson(
   return undefined;
 }
 
-function youtubeEmbedUrl(url: string): string | null {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
-      return `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
-    }
-    if (u.hostname === 'youtu.be') {
-      return `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
 export function LessonViewerPage() {
   const { sectionId, lessonId } = useParams<{ sectionId: string; lessonId: string }>();
   const sid = Number(sectionId);
@@ -47,6 +36,9 @@ export function LessonViewerPage() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [liveProgressPct, setLiveProgressPct] = useState<number | null>(null);
+  const [playerResetKey, setPlayerResetKey] = useState(0);
+  const videoPlayerRef = useRef<LessonVideoPlayerHandle>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: studentKeys.sectionLessons(sid),
@@ -59,13 +51,54 @@ export function LessonViewerPage() {
     [data?.modules, lid],
   );
 
+  useEffect(() => {
+    setLiveProgressPct(null);
+    setPlayerResetKey(0);
+  }, [lid]);
+
+  const applyProgressToCache = useCallback(
+    (response: {
+      progress: {
+        seconds_spent: number;
+        progress_pct: number;
+        completed_at: string | null;
+      };
+    }) => {
+      queryClient.setQueryData<SectionLessonsResponse>(
+        studentKeys.sectionLessons(sid),
+        (old) => {
+          if (!old) return old;
+          return {
+            modules: old.modules.map((mod) => ({
+              ...mod,
+              lessons: mod.lessons.map((l) =>
+                l.id === lid
+                  ? {
+                      ...l,
+                      progress: {
+                        seconds_spent: response.progress.seconds_spent,
+                        progress_pct: response.progress.progress_pct,
+                        completed_at: response.progress.completed_at,
+                        last_accessed: l.progress?.last_accessed ?? null,
+                      },
+                    }
+                  : l,
+              ),
+            })),
+          };
+        },
+      );
+      void queryClient.invalidateQueries({ queryKey: studentKeys.courses() });
+    },
+    [queryClient, sid, lid],
+  );
+
   const progressMutation = useMutation({
     mutationFn: (payload: { seconds_spent?: number; progress_pct?: number }) =>
       updateLessonProgress(lid, payload),
-    onSuccess: () => {
+    onSuccess: (response) => {
       setSaveError(null);
-      queryClient.invalidateQueries({ queryKey: studentKeys.sectionLessons(sid) });
-      queryClient.invalidateQueries({ queryKey: studentKeys.courses() });
+      applyProgressToCache(response);
     },
     onError: (err: Error) => {
       setSaveError(
@@ -74,12 +107,87 @@ export function LessonViewerPage() {
     },
   });
 
+  const resetMutation = useMutation({
+    mutationFn: () => resetLessonProgress(lid),
+    onSuccess: (response) => {
+      setSaveError(null);
+      setLiveProgressPct(0);
+      setPlayerResetKey((k) => k + 1);
+      applyProgressToCache(response);
+    },
+    onError: (err: Error) => {
+      setSaveError(
+        err instanceof ApiError ? err.serverMessage ?? err.message : t('networkError'),
+      );
+    },
+  });
+
+  const mutateRef = useRef(progressMutation.mutate);
+  mutateRef.current = progressMutation.mutate;
+
   const saveProgress = useCallback(
     (payload: { seconds_spent?: number; progress_pct?: number }) => {
-      progressMutation.mutate(payload);
+      mutateRef.current(payload);
     },
-    [progressMutation],
+    [],
   );
+
+  const handleVideoProgress = useCallback(
+    (payload: { seconds_spent?: number; progress_pct?: number }) => {
+      if (payload.progress_pct !== undefined) {
+        setLiveProgressPct(payload.progress_pct);
+      }
+      saveProgress(payload);
+    },
+    [saveProgress],
+  );
+
+  const isCompleteRef = useRef(false);
+  isCompleteRef.current = (liveProgressPct ?? lesson?.progress?.progress_pct ?? 0) >= 100;
+
+  const handleVideoProgressStable = useCallback(
+    (payload: { seconds_spent?: number; progress_pct?: number }) => {
+      if (
+        isCompleteRef.current &&
+        payload.progress_pct !== undefined &&
+        payload.progress_pct < 100
+      ) {
+        return;
+      }
+      handleVideoProgress(payload);
+    },
+    [handleVideoProgress],
+  );
+
+  const videoProgressHandlerRef = useRef(handleVideoProgressStable);
+  videoProgressHandlerRef.current = handleVideoProgressStable;
+
+  const stableVideoProgress = useCallback(
+    (payload: { seconds_spent?: number }) => {
+      videoProgressHandlerRef.current(payload);
+    },
+    [],
+  );
+
+  const handleMarkComplete = useCallback(() => {
+    if (lesson?.type === 'video') {
+      setLiveProgressPct(100);
+      isCompleteRef.current = true;
+      videoPlayerRef.current?.markComplete();
+      saveProgress({
+        progress_pct: 100,
+        ...(lesson.duration_seconds ? { seconds_spent: lesson.duration_seconds } : {}),
+      });
+      return;
+    }
+    saveProgress({ progress_pct: 100 });
+  }, [lesson?.type, lesson?.duration_seconds, saveProgress]);
+
+  const displayProgressPct =
+    liveProgressPct ?? lesson?.progress?.progress_pct ?? 0;
+
+  const isComplete = displayProgressPct >= 100;
+  const isBusy = progressMutation.isPending || resetMutation.isPending;
 
   return (
     <div className="space-y-4">
@@ -105,29 +213,41 @@ export function LessonViewerPage() {
                 </p>
                 <h1 className="mt-1 text-lg font-semibold text-ink">{lesson.title}</h1>
                 <div className="mt-3 max-w-md">
-                  <ProgressBar value={lesson.progress?.progress_pct ?? 0} size="sm" />
+                  <ProgressBar value={displayProgressPct} size="sm" />
                 </div>
               </header>
 
               <div className="px-5 py-6">
-                <LessonContent lesson={lesson} onProgress={saveProgress} />
+                <LessonContent
+                  lesson={lesson}
+                  lessonId={lid}
+                  playerResetKey={playerResetKey}
+                  videoPlayerRef={videoPlayerRef}
+                  onProgress={lesson.type === 'video' ? stableVideoProgress : saveProgress}
+                />
               </div>
 
               <footer className="flex flex-wrap items-center gap-3 border-t border-ink/10 px-5 py-4">
-                <button
-                  type="button"
-                  disabled={progressMutation.isPending}
-                  onClick={() => {
-                    if (lesson.duration_seconds) {
-                      saveProgress({ seconds_spent: lesson.duration_seconds });
-                    } else {
-                      saveProgress({ progress_pct: 100 });
-                    }
-                  }}
-                  className="bg-brass px-4 py-2 text-sm text-white transition hover:bg-brass-hover disabled:opacity-60"
-                >
-                  {progressMutation.isPending ? t('saving') : t('markComplete')}
-                </button>
+                {!isComplete && (
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={handleMarkComplete}
+                    className="bg-brass px-4 py-2 text-sm text-white transition hover:bg-brass-hover disabled:opacity-60"
+                  >
+                    {progressMutation.isPending ? t('saving') : t('markComplete')}
+                  </button>
+                )}
+                {isComplete && (
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => resetMutation.mutate()}
+                    className="border border-ink/20 px-4 py-2 text-sm text-ink transition hover:border-brass hover:text-brass disabled:opacity-60"
+                  >
+                    {resetMutation.isPending ? t('resettingProgress') : t('resetProgress')}
+                  </button>
+                )}
                 {saveError && (
                   <p className="text-xs text-brick" role="alert">
                     {saveError}
@@ -148,29 +268,41 @@ export function LessonViewerPage() {
 
 function LessonContent({
   lesson,
+  lessonId,
+  playerResetKey,
+  videoPlayerRef,
   onProgress,
 }: {
   lesson: LessonSummary;
+  lessonId: number;
+  playerResetKey: number;
+  videoPlayerRef: RefObject<LessonVideoPlayerHandle>;
   onProgress: (payload: { seconds_spent?: number; progress_pct?: number }) => void;
 }) {
   const { t } = useLocale();
 
   switch (lesson.type) {
     case 'video': {
-      const embed = lesson.url ? youtubeEmbedUrl(lesson.url) : null;
-      return embed ? (
-        <VideoPlayer
-          embedUrl={embed}
+      const playable = lesson.url ? resolveVideoSource(lesson.url) : null;
+      return playable && lesson.url ? (
+        <LessonVideoPlayer
+          ref={videoPlayerRef}
+          key={`${lessonId}-${playerResetKey}`}
+          lessonId={lessonId}
+          videoUrl={lesson.url}
           duration={lesson.duration_seconds}
-          initialSeconds={lesson.progress?.seconds_spent ?? 0}
+          initialPositionSeconds={lesson.progress?.seconds_spent ?? 0}
           onProgress={onProgress}
         />
       ) : (
         <p className="text-sm text-ink/60">
           {lesson.url ? (
-            <a href={lesson.url} target="_blank" rel="noreferrer" className="text-brass underline">
-              {t('openExternal')}
-            </a>
+            <>
+              {t('unsupportedLessonType')}{' '}
+              <a href={lesson.url} target="_blank" rel="noreferrer" className="text-brass underline">
+                {t('openExternal')}
+              </a>
+            </>
           ) : (
             t('noVideoUrl')
           )}
@@ -192,7 +324,7 @@ function LessonContent({
         <div className="space-y-3">
           {lesson.file_path && (
             <a
-              href={`/storage/${lesson.file_path}`}
+              href={storageFileUrl(lesson.file_path)}
               target="_blank"
               rel="noreferrer"
               className="inline-block border border-ink/20 px-4 py-2 text-sm text-ink transition hover:border-brass hover:text-brass"
@@ -234,59 +366,6 @@ function LessonContent({
     default:
       return <p className="text-sm text-ink/50">{t('unsupportedLessonType')}</p>;
   }
-}
-
-function VideoPlayer({
-  embedUrl,
-  duration,
-  initialSeconds,
-  onProgress,
-}: {
-  embedUrl: string;
-  duration: number | null;
-  initialSeconds: number;
-  onProgress: (payload: { seconds_spent: number }) => void;
-}) {
-  const lastSave = useRef(0);
-  const secondsRef = useRef(initialSeconds);
-
-  useEffect(() => {
-    secondsRef.current = Math.max(secondsRef.current, initialSeconds);
-  }, [initialSeconds]);
-
-  useEffect(() => {
-    if (!duration || duration <= 0) return;
-
-    const interval = setInterval(() => {
-      if (document.hidden) return;
-
-      secondsRef.current = Math.min(duration, secondsRef.current + 1);
-
-      if (Date.now() - lastSave.current >= 15000) {
-        lastSave.current = Date.now();
-        onProgress({ seconds_spent: secondsRef.current });
-      }
-    }, 1000);
-
-    return () => {
-      clearInterval(interval);
-      if (secondsRef.current > initialSeconds) {
-        onProgress({ seconds_spent: secondsRef.current });
-      }
-    };
-  }, [duration, initialSeconds, onProgress]);
-
-  return (
-    <div className="aspect-video w-full bg-ink/5">
-      <iframe
-        src={embedUrl}
-        title="Lesson video"
-        className="h-full w-full border-0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      />
-    </div>
-  );
 }
 
 function LessonSidebar({

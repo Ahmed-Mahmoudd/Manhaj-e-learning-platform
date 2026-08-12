@@ -67,6 +67,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('courses',                              [StudentDashboardController::class, 'myCourses']);
                 Route::get('sections/{section}/lessons',           [StudentDashboardController::class, 'sectionLessons']);
                 Route::post('lessons/{lesson}/progress',           [StudentDashboardController::class, 'updateProgress']);
+                Route::post('lessons/{lesson}/progress/reset',     [StudentDashboardController::class, 'resetProgress']);
                 Route::get('grades',                               [StudentGradeController::class, 'myGrades']);
                 Route::get('announcements',                        [StudentAnnouncementController::class, 'index']);
                 Route::post('announcements/{announcement}/read',   [StudentAnnouncementController::class, 'markRead']);

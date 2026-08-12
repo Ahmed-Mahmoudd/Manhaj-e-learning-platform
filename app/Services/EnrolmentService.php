@@ -28,22 +28,19 @@ class EnrolmentService
      */
     public function enrol(User $student, Section $section): Enrolment
     {
-        // 1. Check not already enrolled/waitlisted in this section
-        $existing = Enrolment::withoutGlobalScope('tenant')
-            ->where('student_id', $student->id)
-            ->where('section_id', $section->id)
-            ->whereIn('status', ['enrolled', 'waitlisted'])
-            ->first();
-
-        if ($existing) {
-            throw new \RuntimeException('Student is already enrolled or waitlisted in this section.');
-        }
-
-        // 2. Check prerequisites
         $this->checkPrerequisites($student, $section->course);
 
-        // 3. Determine status: enrolled or waitlisted
         return DB::transaction(function () use ($student, $section) {
+            $existing = Enrolment::withoutGlobalScope('tenant')
+                ->where('student_id', $student->id)
+                ->where('section_id', $section->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing) {
+                return $this->handleExistingEnrolment($existing, $section);
+            }
+
             if ($section->hasCapacity()) {
                 return Enrolment::create([
                     'tenant_id'   => $section->tenant_id,
@@ -54,7 +51,6 @@ class EnrolmentService
                 ]);
             }
 
-            // Section is full — add to waitlist
             return Enrolment::create([
                 'tenant_id'         => $section->tenant_id,
                 'student_id'        => $student->id,
@@ -63,6 +59,41 @@ class EnrolmentService
                 'waitlist_position' => $section->nextWaitlistPosition(),
             ]);
         });
+    }
+
+    /**
+     * @throws \RuntimeException
+     */
+    private function handleExistingEnrolment(Enrolment $existing, Section $section): Enrolment
+    {
+        if ($existing->status === 'enrolled') {
+            throw new \RuntimeException('You are already enrolled in this section.');
+        }
+
+        if ($existing->status === 'waitlisted') {
+            throw new \RuntimeException('You are already on the waitlist for this section.');
+        }
+
+        if ($existing->status === 'dropped') {
+            if ($section->hasCapacity()) {
+                $existing->update([
+                    'status'            => 'enrolled',
+                    'enrolled_at'       => now(),
+                    'dropped_at'        => null,
+                    'waitlist_position' => null,
+                ]);
+            } else {
+                $existing->update([
+                    'status'            => 'waitlisted',
+                    'waitlist_position' => $section->nextWaitlistPosition(),
+                    'dropped_at'        => null,
+                ]);
+            }
+
+            return $existing->fresh();
+        }
+
+        throw new \RuntimeException("Cannot enrol with existing status '{$existing->status}'.");
     }
 
     /**
