@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { homePathForRole } from '@/auth/roles';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { AuthAlert, AuthField, AuthSubmitButton } from '@/components/auth/AuthField';
+import { AuthLayout } from '@/components/auth/AuthLayout';
 import { useLocale } from '@/i18n/LocaleContext';
 
 export function LoginPage() {
@@ -52,127 +53,50 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-paper animate-fade-rise">
-      <div className="bg-ink text-white">
-        <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-4">
-          <div>
-            <h1 className="text-lg font-semibold tracking-[0.2em]">{t('appName')}</h1>
-            <p className="text-xs text-white/60">{t('appTagline')}</p>
-          </div>
-          <LanguageSwitcher />
-        </div>
-        {/* Term-ledger motif — decorative week ticks */}
-        <div
-          className="mx-auto flex max-w-lg gap-0.5 px-4 pb-3 opacity-40"
-          aria-hidden
-        >
-          {Array.from({ length: 16 }).map((_, i) => (
-            <div
-              key={i}
-              className={`h-1 flex-1 ${i === 5 ? 'bg-brass' : 'bg-white/30'}`}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-lg px-4 py-10">
-        <div className="border border-ink/15 bg-white px-6 py-8 sm:px-8">
-          <h2 className="text-xl font-semibold text-ink">{t('signIn')}</h2>
-          <p className="mt-1 text-sm text-ink/60">{t('signInSubtitle')}</p>
-
-          {generalError && (
-            <div
-              className="mt-6 border-s-2 border-brick bg-brick/5 px-4 py-3 text-sm text-brick"
-              role="alert"
-            >
-              {generalError}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
-            <Field
-              id="email"
-              label={t('email')}
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={setEmail}
-              error={fieldErrors.email}
-            />
-            <Field
-              id="password"
-              label={t('password')}
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={setPassword}
-              error={fieldErrors.password}
-            />
-
-            <p className="text-end text-sm">
-              <Link to="/forgot-password" className="text-brass hover:underline">
-                {t('forgotPassword')}
-              </Link>
-            </p>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-brass py-2.5 text-sm font-medium text-white transition hover:bg-brass-hover disabled:opacity-60"
-            >
-              {submitting ? t('signingIn') : t('signIn')}
-            </button>
-          </form>
-
-          <div className="mt-6 space-y-1 font-mono text-xs text-ink/50">
+    <AuthLayout
+      title={t('signIn')}
+      subtitle={t('signInSubtitle')}
+      footer={
+        import.meta.env.DEV ? (
+          <div className="space-y-1 font-mono text-xs text-ink/50">
             <p>{t('demoHint')}</p>
             <p>{t('demoAccounts')}</p>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+        ) : undefined
+      }
+    >
+      {generalError && <AuthAlert>{generalError}</AuthAlert>}
 
-function Field({
-  id,
-  label,
-  type,
-  autoComplete,
-  value,
-  onChange,
-  error,
-}: {
-  id: string;
-  label: string;
-  type: string;
-  autoComplete?: string;
-  value: string;
-  onChange: (v: string) => void;
-  error?: string;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium text-ink">
-        {label}
-      </label>
-      <input
-        id={id}
-        type={type}
-        autoComplete={autoComplete}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`mt-1.5 w-full border bg-paper px-3 py-2 text-sm outline-none transition focus:border-brass ${
-          error ? 'border-brick' : 'border-ink/20'
-        }`}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${id}-error` : undefined}
-      />
-      {error && (
-        <p id={`${id}-error`} className="mt-1.5 text-xs text-brick" role="alert">
-          {error}
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <AuthField
+          id="email"
+          label={t('email')}
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={setEmail}
+          error={fieldErrors.email}
+        />
+        <AuthField
+          id="password"
+          label={t('password')}
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={setPassword}
+          error={fieldErrors.password}
+        />
+
+        <p className="text-end text-sm">
+          <Link to="/forgot-password" className="text-brass hover:underline">
+            {t('forgotPassword')}
+          </Link>
         </p>
-      )}
-    </div>
+
+        <AuthSubmitButton disabled={submitting}>
+          {submitting ? t('signingIn') : t('signIn')}
+        </AuthSubmitButton>
+      </form>
+    </AuthLayout>
   );
 }
