@@ -260,6 +260,7 @@ class UniversityAdminApiTest extends TestCase
         $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
              ->postJson('/api/v1/admin/users', [
                  'name' => 'New Instructor', 'email' => 'new.inst@test.com', 'role' => 'instructor',
+                 'password' => 'secure-pass-123',
              ])->assertCreated()->assertJsonPath('user.role', 'instructor');
         $this->assertDatabaseHas('users', ['email' => 'new.inst@test.com', 'tenant_id' => $tenant->id]);
     }

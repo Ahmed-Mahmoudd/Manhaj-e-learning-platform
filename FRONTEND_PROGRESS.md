@@ -104,6 +104,21 @@ Login, token storage, `X-Tenant-ID`, role guards, AR/EN RTL, placeholder homes f
 
 **Run:** `php artisan serve` + `cd frontend && npm run dev`
 
+### Production hardening (2026-08-13)
+
+- **CI:** GitHub Actions — PHPUnit + Vitest + frontend production build (`.github/workflows/ci.yml`)
+- **Deploy docs:** `DEPLOY.md` + updated `.env.example` / `frontend/.env.example`
+- **CORS / Sanctum:** `config/cors.php`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `SANCTUM_STATEFUL_DOMAINS`
+- **Auth:** Login rate limit (5/min), forgot/reset password API + SPA pages, queued reset emails
+- **Admin users:** Password required (min 8) — no default `password` in create form
+- **Lesson XSS (defence in depth):** Server-side HTMLPurifier on `Lesson` save + existing DOMPurify on render
+- **Demo gating:** Module 2 in seeder locked until Module 1 completed (`release_after_module_id`)
+- **Frontend API URL:** `VITE_API_URL` for production builds (`frontend/src/api/client.ts`)
+
+**Password reset:** `/forgot-password` → email link → `/reset-password?token=...&email=...`
+
+**Run tests:** `php artisan test` + `cd frontend && npm test && npm run build`
+
 ---
 
 ## IN PROGRESS
@@ -128,4 +143,4 @@ Login, token storage, `X-Tenant-ID`, role guards, AR/EN RTL, placeholder homes f
 - University admin: `admin@cut.manhaj.app` / `password`
 - Platform admin: `admin@manhaj.app` / `password`
 
-**Next session:** E2E tests, production deployment prep, or further hardening.
+**Next session:** E2E tests, instructor content authoring UI, or platform admin user management.

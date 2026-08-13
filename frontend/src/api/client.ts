@@ -8,7 +8,8 @@ import {
 } from '@/types/api';
 import { clearSession, getTenantId, getToken } from '@/auth/storage';
 
-const BASE = '/api/v1';
+const API_ROOT = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+const BASE = API_ROOT ? `${API_ROOT}/api/v1` : '/api/v1';
 
 export class ApiError extends Error {
   constructor(
@@ -102,6 +103,27 @@ export function login(email: string, password: string) {
   return apiRequest<LoginResponse>('/auth/login', {
     method: 'POST',
     body: { email, password },
+    anonymous: true,
+  });
+}
+
+export function forgotPassword(email: string) {
+  return apiRequest<MessageResponse>('/auth/forgot-password', {
+    method: 'POST',
+    body: { email },
+    anonymous: true,
+  });
+}
+
+export function resetPassword(payload: {
+  email: string;
+  token: string;
+  password: string;
+  password_confirmation: string;
+}) {
+  return apiRequest<MessageResponse>('/auth/reset-password', {
+    method: 'POST',
+    body: payload,
     anonymous: true,
   });
 }

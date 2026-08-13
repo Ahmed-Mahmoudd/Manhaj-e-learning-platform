@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { homePathForRole } from '@/auth/roles';
@@ -108,6 +108,12 @@ export function LoginPage() {
               onChange={setPassword}
               error={fieldErrors.password}
             />
+
+            <p className="text-end text-sm">
+              <Link to="/forgot-password" className="text-brass hover:underline">
+                {t('forgotPassword')}
+              </Link>
+            </p>
 
             <button
               type="submit"

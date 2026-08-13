@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\HtmlSanitizer;
 use App\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -31,6 +32,15 @@ class Lesson extends Model
             'order'            => 'integer',
             'duration_seconds' => 'integer',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (Lesson $lesson): void {
+            if ($lesson->type === 'text' && is_string($lesson->body)) {
+                $lesson->body = app(HtmlSanitizer::class)->sanitize($lesson->body);
+            }
+        });
     }
 
     // ─── Relationships ────────────────────────────────────────────────────────

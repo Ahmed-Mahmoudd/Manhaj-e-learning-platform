@@ -4,6 +4,8 @@ import { useAuth } from '@/auth/AuthContext';
 import { useLocale } from '@/i18n/LocaleContext';
 import { StudentShell } from '@/components/StudentShell';
 import { LoginPage } from '@/pages/LoginPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { LessonViewerPage } from '@/pages/student/LessonViewerPage';
 import { MyCoursesPage } from '@/pages/student/MyCoursesPage';
 import { CataloguePage } from '@/pages/student/CataloguePage';
@@ -54,6 +56,8 @@ export function AppRoutes() {
 
       <Route element={<GuestRoute />}>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={['student']} />}>

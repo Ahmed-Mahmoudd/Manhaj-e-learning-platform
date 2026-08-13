@@ -50,7 +50,7 @@ class UserAdminController extends Controller
             'name'      => $validated['name'],
             'email'     => $validated['email'],
             'role'      => $validated['role'],
-            'password'  => Hash::make($validated['password'] ?? str()->random(16)),
+            'password'  => Hash::make($validated['password']),
         ]);
 
         return response()->json(['user' => $this->fmt($user)], 201);

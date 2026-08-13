@@ -244,11 +244,12 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $module2 = Module::factory()->create([
-            'tenant_id'    => $tenant->id,
-            'course_id'    => $cs101->id,
-            'title'        => 'Module 2: Variables & Data Types',
-            'order'        => 2,
-            'is_published' => true,
+            'tenant_id'               => $tenant->id,
+            'course_id'               => $cs101->id,
+            'title'                   => 'Module 2: Variables & Data Types',
+            'order'                   => 2,
+            'is_published'            => true,
+            'release_after_module_id' => $module1->id,
         ]);
 
         Lesson::factory()->create([

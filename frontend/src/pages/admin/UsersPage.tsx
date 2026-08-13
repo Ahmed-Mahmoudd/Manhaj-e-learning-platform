@@ -130,8 +130,10 @@ function CreateForm({ onDone, locale }: { onDone: () => void; locale: 'en' | 'ar
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<UserRole>('student');
-  const [password, setPassword] = useState('password');
+  const [password, setPassword] = useState('');
   const [err, setErr] = useState<Error | null>(null);
+
+  const canSubmit = name.trim() && email.trim() && password.length >= 8;
 
   const mutation = useMutation({
     mutationFn: () => createAdminUser({ name, email, role, password }),
@@ -154,10 +156,19 @@ function CreateForm({ onDone, locale }: { onDone: () => void; locale: 'en' | 'ar
             </option>
           ))}
         </AdminSelect>
-        <AdminInput placeholder={t('password')} value={password} onChange={(e) => setPassword(e.target.value)} />
+        <AdminInput
+          placeholder={t('password')}
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
       </div>
       <FormError error={err} />
-      <AdminButton variant="primary" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+      <AdminButton
+        variant="primary"
+        onClick={() => mutation.mutate()}
+        disabled={mutation.isPending || !canSubmit}
+      >
         {t('create')}
       </AdminButton>
     </AdminPanel>

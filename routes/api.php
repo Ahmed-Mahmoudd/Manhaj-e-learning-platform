@@ -41,7 +41,9 @@ Route::prefix('v1')->group(function () {
 
     // ── Public: auth ──────────────────────────────────────────────────────
     Route::prefix('auth')->group(function () {
-        Route::post('login', [AuthController::class, 'login']);
+        Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
+        Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:password-reset');
+        Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:password-reset');
     });
 
     // ── Protected: all authenticated users ───────────────────────────────

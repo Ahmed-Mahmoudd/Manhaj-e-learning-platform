@@ -18,7 +18,7 @@ class StoreUserRequest extends FormRequest
             'name'     => ['required', 'string', 'max:255'],
             'email'    => ['required', 'email', 'unique:users,email'],
             'role'     => ['required', 'string', 'in:' . implode(',', UserAdminController::MANAGEABLE_ROLES)],
-            'password' => ['nullable', 'string', 'min:8'],
+            'password' => ['required', 'string', 'min:8'],
         ];
     }
 }
