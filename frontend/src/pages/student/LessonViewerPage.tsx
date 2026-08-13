@@ -18,6 +18,7 @@ import { apiErrorMessage } from '@/utils/apiError';
 import { lessonTypeLabel } from '@/utils/lessonType';
 import { parseRouteId } from '@/utils/routeParams';
 import { resolveVideoSource } from '@/utils/videoSource';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 import type { CourseModule, LessonSummary, SectionLessonsResponse } from '@/types/student';
 
 function findLessonContext(
@@ -326,7 +327,7 @@ function LessonContent({
       return lesson.body ? (
         <div
           className="prose prose-sm max-w-none text-ink/85 [&_h2]:text-ink [&_p]:leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: lesson.body }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(lesson.body) }}
         />
       ) : (
         <p className="text-sm text-ink/50">{t('noContent')}</p>

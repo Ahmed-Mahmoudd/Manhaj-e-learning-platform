@@ -97,6 +97,11 @@ Login, token storage, `X-Tenant-ID`, role guards, AR/EN RTL, placeholder homes f
 - Discussion thread badges (pin/lock/resolved/question)
 - Instructor section stat chips
 
+### Security — lesson HTML XSS (2026-08-13)
+**Stored XSS fix:** Text lessons render instructor-authored HTML via `dangerouslySetInnerHTML`. Added `sanitizeHtml()` (DOMPurify) at render time in `LessonViewerPage` — strips `<script>`, event handlers, `javascript:` URLs, and embed tags while keeping common formatting (`p`, `strong`, lists, links, images with `src` only). Announcement/discussion bodies are plain text (React-escaped), not affected.
+
+**Tests:** `frontend/src/utils/sanitizeHtml.test.ts` (Vitest, 3 cases). Run `cd frontend && npm test`. Backend suite unchanged (208 passing).
+
 **Run:** `php artisan serve` + `cd frontend && npm run dev`
 
 ---
@@ -123,4 +128,4 @@ Login, token storage, `X-Tenant-ID`, role guards, AR/EN RTL, placeholder homes f
 - University admin: `admin@cut.manhaj.app` / `password`
 - Platform admin: `admin@manhaj.app` / `password`
 
-**Next session:** Polish, E2E tests, or production deployment prep.
+**Next session:** E2E tests, production deployment prep, or further hardening.
