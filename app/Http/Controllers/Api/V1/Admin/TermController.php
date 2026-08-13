@@ -13,7 +13,7 @@ class TermController extends Controller
 {
     public function index(): JsonResponse
     {
-        return response()->json(['terms' => AcademicTerm::orderByDesc('start_date')->get()]);
+        return response()->json(['terms' => AcademicTerm::orderByDesc('starts_at')->get()]);
     }
 
     public function store(StoreTermRequest $request): JsonResponse

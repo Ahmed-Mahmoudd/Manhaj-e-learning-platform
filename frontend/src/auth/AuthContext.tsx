@@ -55,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       apiLogin(email, password),
     onSuccess: (data) => {
+      queryClient.clear();
       saveSession({ token: data.token, user: data.user });
       setToken(data.token);
       queryClient.setQueryData(['auth', 'me'], { user: data.user });
@@ -66,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSettled: () => {
       clearSession();
       setToken(null);
-      queryClient.removeQueries({ queryKey: ['auth'] });
+      queryClient.clear();
     },
   });
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/api/client';
 import {
@@ -13,11 +13,14 @@ import {
   fetchSectionEligibility,
 } from '@/api/catalogue';
 import { studentKeys } from '@/api/student';
+import { BackLink } from '@/components/BackLink';
 import { AsyncPanel } from '@/components/AsyncPanel';
 import { MarginNote } from '@/components/MarginNote';
 import { useLocale } from '@/i18n/LocaleContext';
 import type { CatalogueSection, StudentEnrolment } from '@/types/catalogue';
 import { courseTitle } from '@/utils/courseTitle';
+import { apiErrorMessage } from '@/utils/apiError';
+import { eligibilityReasonText } from '@/utils/eligibilityReason';
 
 export function CourseDetailPage() {
   const { courseId } = useParams<{ courseId: string }>();
@@ -43,12 +46,7 @@ export function CourseDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link
-        to="/student/catalogue"
-        className="text-sm text-ink/50 transition hover:text-brass"
-      >
-        ← {t('backToCatalogue')}
-      </Link>
+      <BackLink to="/student/catalogue">{t('backToCatalogue')}</BackLink>
 
       <AsyncPanel
         isLoading={isLoading}
@@ -77,7 +75,7 @@ export function CourseDetailPage() {
                 <ul className="mt-2 space-y-1">
                   {course.prerequisites.map((p) => (
                     <li key={p.id} className="font-mono text-sm text-ink/55">
-                      {p.code} — {p.title_en}
+                      {p.code} — {courseTitle(p, locale)}
                     </li>
                   ))}
                 </ul>
@@ -86,7 +84,20 @@ export function CourseDetailPage() {
 
             <section className="space-y-3">
               <h2 className="text-sm font-medium text-ink/70">{t('availableSections')}</h2>
-              {course.sections.length === 0 ? (
+              {enrolmentsQuery.isLoading ? (
+                <p className="text-sm text-ink/50">{t('loading')}</p>
+              ) : enrolmentsQuery.error ? (
+                <div
+                  className="border border-brick/30 bg-brick/5 px-4 py-3 text-sm text-brick"
+                  role="alert"
+                >
+                  {apiErrorMessage(
+                    enrolmentsQuery.error,
+                    t('networkError'),
+                    t('serverError'),
+                  )}
+                </div>
+              ) : course.sections.length === 0 ? (
                 <p className="text-sm text-ink/50">{t('noSections')}</p>
               ) : (
                 course.sections.map((section) => (
@@ -166,6 +177,7 @@ function SectionEnrolRow({
   const availability = availabilityQuery.data;
   const eligibility = eligibilityQuery.data;
   const isLoading = availabilityQuery.isLoading || eligibilityQuery.isLoading;
+  const fetchError = availabilityQuery.error ?? eligibilityQuery.error;
 
   return (
     <div className="border border-ink/10 bg-white px-4 py-4">
@@ -212,6 +224,10 @@ function SectionEnrolRow({
             </>
           ) : isLoading ? (
             <span className="text-xs text-ink/40">{t('loading')}</span>
+          ) : fetchError ? (
+            <span className="text-xs text-brick" role="alert">
+              {apiErrorMessage(fetchError, t('networkError'), t('serverError'), t)}
+            </span>
           ) : eligibility ? (
             <EnrolActions
               eligibility={eligibility}
@@ -225,7 +241,9 @@ function SectionEnrolRow({
       {eligibility && !existingEnrolment && (
         <div className="mt-3 space-y-2">
           {!eligibility.can_enrol && eligibility.reason && (
-            <MarginNote tone="brick">{eligibility.reason}</MarginNote>
+            <MarginNote tone="brick">
+              {eligibilityReasonText(eligibility.reason, t) ?? eligibility.reason}
+            </MarginNote>
           )}
           {eligibility.missing_prerequisites.length > 0 && (
             <MarginNote tone="brick">
@@ -234,7 +252,9 @@ function SectionEnrolRow({
             </MarginNote>
           )}
           {eligibility.can_enrol && eligibility.would_be_waitlisted && (
-            <MarginNote tone="brick">{eligibility.reason ?? t('sectionFullWaitlist')}</MarginNote>
+            <MarginNote tone="brick">
+              {eligibilityReasonText(eligibility.reason, t) ?? t('sectionFullWaitlist')}
+            </MarginNote>
           )}
         </div>
       )}

@@ -1,5 +1,6 @@
 import { apiRequest } from '@/api/client';
 import type {
+  DiscussionPost,
   ThreadSummary,
   ThreadType,
   ThreadViewResponse,
@@ -31,7 +32,7 @@ export function addThreadPost(
   threadId: number,
   payload: { body: string; parent_post_id?: number },
 ) {
-  return apiRequest<{ post: unknown }>(`/discuss/threads/${threadId}/posts`, {
+  return apiRequest<{ post: DiscussionPost }>(`/discuss/threads/${threadId}/posts`, {
     method: 'POST',
     body: payload,
   });
@@ -39,6 +40,25 @@ export function addThreadPost(
 
 export function togglePostVote(postId: number) {
   return apiRequest<VoteResponse>(`/discuss/posts/${postId}/vote`, { method: 'POST' });
+}
+
+export function toggleThreadPin(threadId: number) {
+  return apiRequest<{ is_pinned: boolean }>(`/discuss/threads/${threadId}/pin`, {
+    method: 'POST',
+  });
+}
+
+export function toggleThreadLock(threadId: number) {
+  return apiRequest<{ is_locked: boolean }>(`/discuss/threads/${threadId}/lock`, {
+    method: 'POST',
+  });
+}
+
+export function markPostAsAnswer(postId: number) {
+  return apiRequest<{ is_instructor_answer: boolean; thread_resolved: boolean }>(
+    `/discuss/posts/${postId}/answer`,
+    { method: 'POST' },
+  );
 }
 
 export const discussionKeys = {

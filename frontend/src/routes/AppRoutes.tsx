@@ -1,9 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { homePathForRole } from '@/auth/roles';
 import { useAuth } from '@/auth/AuthContext';
+import { useLocale } from '@/i18n/LocaleContext';
 import { StudentShell } from '@/components/StudentShell';
 import { LoginPage } from '@/pages/LoginPage';
-import { RoleHomePage } from '@/pages/RoleHomePage';
 import { LessonViewerPage } from '@/pages/student/LessonViewerPage';
 import { MyCoursesPage } from '@/pages/student/MyCoursesPage';
 import { CataloguePage } from '@/pages/student/CataloguePage';
@@ -14,14 +14,32 @@ import { AnnouncementsPage } from '@/pages/student/AnnouncementsPage';
 import { DiscussSectionsPage } from '@/pages/student/DiscussSectionsPage';
 import { DiscussThreadsPage } from '@/pages/student/DiscussThreadsPage';
 import { DiscussThreadPage } from '@/pages/student/DiscussThreadPage';
+import { InstructorShell } from '@/components/InstructorShell';
+import { MySectionsPage } from '@/pages/instructor/MySectionsPage';
+import { SectionRosterPage } from '@/pages/instructor/SectionRosterPage';
+import { SectionGradesPage } from '@/pages/instructor/SectionGradesPage';
+import { GradeItemGradesPage } from '@/pages/instructor/GradeItemGradesPage';
+import { SectionAnnouncementsPage } from '@/pages/instructor/SectionAnnouncementsPage';
+import { InstructorDiscussThreadsPage } from '@/pages/instructor/InstructorDiscussThreadsPage';
+import { InstructorDiscussThreadPage } from '@/pages/instructor/InstructorDiscussThreadPage';
+import { AdminShell } from '@/components/admin/AdminShell';
+import { FacultiesPage } from '@/pages/admin/FacultiesPage';
+import { DepartmentsPage } from '@/pages/admin/DepartmentsPage';
+import { TermsPage } from '@/pages/admin/TermsPage';
+import { CoursesPage } from '@/pages/admin/CoursesPage';
+import { SectionsPage } from '@/pages/admin/SectionsPage';
+import { UsersPage } from '@/pages/admin/UsersPage';
+import { PlatformShell } from '@/components/platform/PlatformShell';
+import { TenantsPage } from '@/pages/platform/TenantsPage';
 import { GuestRoute, ProtectedRoute } from '@/routes/guards';
 
 function RootRedirect() {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { t } = useLocale();
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-paper">
-        <p className="text-ink/60 text-sm">…</p>
+        <p className="text-ink/60 text-sm">{t('loading')}</p>
       </div>
     );
   }
@@ -64,10 +82,27 @@ export function AppRoutes() {
           <ProtectedRoute allowedRoles={['instructor', 'teaching_assistant']} />
         }
       >
-        <Route
-          path="/instructor"
-          element={<RoleHomePage titleKey="placeholderInstructor" />}
-        />
+        <Route element={<InstructorShell />}>
+          <Route path="/instructor" element={<MySectionsPage />} />
+          <Route path="/instructor/sections/:sectionId" element={<SectionRosterPage />} />
+          <Route path="/instructor/sections/:sectionId/grades" element={<SectionGradesPage />} />
+          <Route
+            path="/instructor/sections/:sectionId/grades/:itemId"
+            element={<GradeItemGradesPage />}
+          />
+          <Route
+            path="/instructor/sections/:sectionId/announcements"
+            element={<SectionAnnouncementsPage />}
+          />
+          <Route
+            path="/instructor/sections/:sectionId/discuss"
+            element={<InstructorDiscussThreadsPage />}
+          />
+          <Route
+            path="/instructor/sections/:sectionId/discuss/threads/:threadId"
+            element={<InstructorDiscussThreadPage />}
+          />
+        </Route>
       </Route>
 
       <Route
@@ -75,14 +110,22 @@ export function AppRoutes() {
           <ProtectedRoute allowedRoles={['university_admin', 'faculty_admin']} />
         }
       >
-        <Route path="/admin" element={<RoleHomePage titleKey="placeholderAdmin" />} />
+        <Route element={<AdminShell />}>
+          <Route path="/admin" element={<Navigate to="/admin/faculties" replace />} />
+          <Route path="/admin/faculties" element={<FacultiesPage />} />
+          <Route path="/admin/departments" element={<DepartmentsPage />} />
+          <Route path="/admin/terms" element={<TermsPage />} />
+          <Route path="/admin/courses" element={<CoursesPage />} />
+          <Route path="/admin/sections" element={<SectionsPage />} />
+          <Route path="/admin/users" element={<UsersPage />} />
+        </Route>
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={['platform_admin']} />}>
-        <Route
-          path="/platform"
-          element={<RoleHomePage titleKey="placeholderPlatform" />}
-        />
+        <Route element={<PlatformShell />}>
+          <Route path="/platform" element={<Navigate to="/platform/tenants" replace />} />
+          <Route path="/platform/tenants" element={<TenantsPage />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<RootRedirect />} />

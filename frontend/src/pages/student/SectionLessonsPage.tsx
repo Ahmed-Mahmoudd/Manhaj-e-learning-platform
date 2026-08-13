@@ -1,22 +1,22 @@
+import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchMyCourses, fetchSectionLessons, studentKeys } from '@/api/student';
 import { AsyncPanel } from '@/components/AsyncPanel';
+import { BackLink } from '@/components/BackLink';
+import { InvalidParamState } from '@/components/InvalidParamState';
 import { ProgressBar } from '@/components/ProgressBar';
 import { TermLedger } from '@/components/TermLedger';
 import { useLocale } from '@/i18n/LocaleContext';
+import { formatLessonDuration } from '@/utils/formatDuration';
 import { lessonTypeLabel } from '@/utils/lessonType';
+import { parseRouteId } from '@/utils/routeParams';
+import { completionPctFromModules } from '@/utils/sectionCompletion';
 import type { LessonSummary } from '@/types/student';
-
-function formatDuration(seconds: number | null): string {
-  if (!seconds) return '';
-  const m = Math.floor(seconds / 60);
-  return `${m} min`;
-}
 
 export function SectionLessonsPage() {
   const { sectionId } = useParams<{ sectionId: string }>();
-  const id = Number(sectionId);
+  const id = parseRouteId(sectionId);
   const { t, locale } = useLocale();
 
   const coursesQuery = useQuery({
@@ -25,9 +25,9 @@ export function SectionLessonsPage() {
   });
 
   const lessonsQuery = useQuery({
-    queryKey: studentKeys.sectionLessons(id),
-    queryFn: () => fetchSectionLessons(id),
-    enabled: Number.isFinite(id) && id > 0,
+    queryKey: studentKeys.sectionLessons(id ?? 0),
+    queryFn: () => fetchSectionLessons(id!),
+    enabled: id !== null,
   });
 
   const enrolment = coursesQuery.data?.courses.find(
@@ -42,17 +42,25 @@ export function SectionLessonsPage() {
   const isLoading = lessonsQuery.isLoading || coursesQuery.isLoading;
   const error = lessonsQuery.error ?? coursesQuery.error;
   const modules = lessonsQuery.data?.modules ?? [];
+  const liveCompletion = useMemo(
+    () => (modules.length > 0 ? completionPctFromModules(modules) : null),
+    [modules],
+  );
+  const completionPct = liveCompletion ?? enrolment?.completion_pct;
+
+  if (id === null) {
+    return (
+      <InvalidParamState
+        message={t('invalidSectionId')}
+        backTo="/student"
+        backLabel={t('backToCourses')}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          to="/student"
-          className="text-sm text-ink/50 transition hover:text-brass"
-        >
-          ← {t('backToCourses')}
-        </Link>
-      </div>
+      <BackLink to="/student">{t('backToCourses')}</BackLink>
 
       {enrolment && (
         <header className="space-y-4">
@@ -67,9 +75,7 @@ export function SectionLessonsPage() {
             endsAt={enrolment.section.term.ends_at}
             label={enrolment.section.term.name}
           />
-          {enrolment.completion_pct != null && (
-            <ProgressBar value={enrolment.completion_pct} />
-          )}
+          {completionPct != null && <ProgressBar value={completionPct} />}
         </header>
       )}
 
@@ -117,33 +123,50 @@ function LessonRow({
   sectionId: number;
   disabled: boolean;
 }) {
+  const { t } = useLocale();
   const pct = lesson.progress?.progress_pct ?? 0;
+  const complete = pct >= 100;
 
   const content = (
     <div className="px-4 py-3">
-      <div className="flex items-center gap-4">
-        <TypeBadge type={lesson.type} />
+      <div className="flex items-center gap-3">
+        {disabled ? (
+          <LockIcon className="size-4 shrink-0 text-ink/30" />
+        ) : complete ? (
+          <CompleteIcon className="size-4 shrink-0 text-sage" />
+        ) : (
+          <TypeBadge type={lesson.type} />
+        )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm text-ink">{lesson.title}</p>
+          <p className={`truncate text-sm ${complete ? 'text-ink/70' : 'text-ink'}`}>
+            {lesson.title}
+          </p>
           {lesson.duration_seconds ? (
             <p className="font-mono text-xs text-ink/40">
-              {formatDuration(lesson.duration_seconds)}
+              {formatLessonDuration(lesson.duration_seconds, t)}
             </p>
           ) : null}
         </div>
+        {!disabled && (
+          <span className="font-mono text-xs text-ink/45">
+            {complete ? t('complete') : `${Math.round(pct)}%`}
+          </span>
+        )}
       </div>
-      <div className="mt-2 ps-14">
-        <ProgressBar value={pct} size="sm" showLabel={false} />
-      </div>
+      {!disabled && (
+        <div className="mt-2 ps-7">
+          <ProgressBar value={pct} size="sm" showLabel={false} />
+        </div>
+      )}
     </div>
   );
 
   if (disabled) {
-    return <li className="opacity-50">{content}</li>;
+    return <li className="bg-ink/[0.02] opacity-60">{content}</li>;
   }
 
   return (
-    <li>
+    <li className={complete ? 'bg-sage/[0.04]' : undefined}>
       <Link
         to={`/student/sections/${sectionId}/lessons/${lesson.id}`}
         className="block transition hover:bg-paper/80"
@@ -151,6 +174,37 @@ function LessonRow({
         {content}
       </Link>
     </li>
+  );
+}
+
+function CompleteIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
+      <path d="M3.5 8.5 6.5 11.5 12.5 4.5" />
+    </svg>
+  );
+}
+
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      aria-hidden
+    >
+      <rect x="3.5" y="7" width="9" height="6.5" rx="1" />
+      <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" />
+    </svg>
   );
 }
 

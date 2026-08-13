@@ -51,6 +51,8 @@ class InstructorDashboardController extends Controller
                 'name'      => $section->term->name,
                 'type'      => $section->term->type,
                 'is_active' => $section->term->is_active,
+                'starts_at' => $section->term->starts_at,
+                'ends_at'   => $section->term->ends_at,
             ],
         ]);
 

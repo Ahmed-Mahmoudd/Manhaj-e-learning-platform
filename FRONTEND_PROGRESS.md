@@ -58,6 +58,47 @@ Login, token storage, `X-Tenant-ID`, role guards, AR/EN RTL, placeholder homes f
 
 **Run:** `php artisan serve` + `cd frontend && npm run dev` → `student@cut.manhaj.app` / `password`
 
+### Instructor — shell + sections (item 3, part A–B)
+- `/instructor` — my sections list with enrolment counts + schedule
+- `/instructor/sections/:id` — student roster table
+- **Demo login:** `instructor@cut.manhaj.app` / `password` (CS101 §01, 11 enrolled incl. demo student)
+
+### Instructor — grading (item 3, part C)
+- `/instructor/sections/:id/grades` — grade items list + create new item
+- `/instructor/sections/:id/grades/:itemId` — enter scores per student, save, publish to students
+- Seeded CS101 items are already published; create a new item to test draft → publish flow
+
+### Instructor — announcements (item 3, part D)
+- `/instructor/sections/:id/announcements` — list drafts + published; create with optional immediate publish; publish drafts; read counts
+
+### Instructor — discussion moderation (item 3, part E)
+- `/instructor/sections/:id/discuss` — thread list for section
+- `/instructor/sections/:id/discuss/threads/:id` — pin/unpin, lock/unlock, mark answer, staff reply
+
+**Instructor demo:** `instructor@cut.manhaj.app` / `password`
+
+### University admin (item 4)
+- `/admin/faculties` — CRUD faculties
+- `/admin/departments` — CRUD departments (filter by faculty)
+- `/admin/terms` — create terms, activate/deactivate
+- `/admin/courses` — create/delete courses, prerequisites by ID
+- `/admin/sections` — create/delete sections
+- `/admin/users` — create users, change roles (paginated)
+- **Demo login:** `admin@cut.manhaj.app` / `password`
+
+### Platform admin (item 5)
+- `/platform/tenants` — list/create tenants, activate/deactivate, expandable stats
+- **Demo login:** `admin@manhaj.app` / `password`
+
+### UX polish (2026-08-12)
+- Urgent announcement styling (light red) + nav unread badges
+- Grade letter color chips + "new grades" nav badge
+- Lesson list progress (checkmark at 100%, lock icon)
+- Discussion thread badges (pin/lock/resolved/question)
+- Instructor section stat chips
+
+**Run:** `php artisan serve` + `cd frontend && npm run dev`
+
 ---
 
 ## IN PROGRESS
@@ -70,10 +111,16 @@ Login, token storage, `X-Tenant-ID`, role guards, AR/EN RTL, placeholder homes f
 
 - (none — student item 2 complete)
 
+## NOT STARTED (Instructor item 3 remainder)
+
+- (none — instructor item 3 complete)
+
 ## NOT STARTED (later items)
 
-3. **Instructor:** sections, roster, grades, announcements, discussion moderation
-4. **University Admin:** CRUD data tables
-5. **Platform Admin:** tenant CRUD, stats
+- (none — items 1–5 frontend shells complete)
 
-**Next session:** **Instructor shell** — sections roster, grading, announcements authoring.
+**Demo logins:**
+- University admin: `admin@cut.manhaj.app` / `password`
+- Platform admin: `admin@manhaj.app` / `password`
+
+**Next session:** Polish, E2E tests, or production deployment prep.

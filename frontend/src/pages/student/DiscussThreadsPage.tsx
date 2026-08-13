@@ -1,34 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError } from '@/api/client';
 import { createThread, discussionKeys, fetchSectionThreads } from '@/api/discussion';
 import { AsyncPanel } from '@/components/AsyncPanel';
+import { BackLink } from '@/components/BackLink';
+import { InvalidParamState } from '@/components/InvalidParamState';
 import { PaginationBar } from '@/components/PaginationBar';
+import { ThreadBadges } from '@/components/ThreadBadges';
 import { useLocale } from '@/i18n/LocaleContext';
+import { apiErrorMessage } from '@/utils/apiError';
+import { trimRequired } from '@/utils/formText';
+import { parseRouteId } from '@/utils/routeParams';
+import { replyCountLabel } from '@/utils/replyCountLabel';
 import type { ThreadSummary, ThreadType } from '@/types/discussion';
-import { threadTypeLabel } from '@/utils/threadType';
 
 export function DiscussThreadsPage() {
   const { sectionId } = useParams<{ sectionId: string }>();
-  const sid = Number(sectionId);
+  const sid = parseRouteId(sectionId);
   const { t } = useLocale();
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
 
+  useEffect(() => {
+    setPage(1);
+  }, [sid]);
+
   const { data, isLoading, error } = useQuery({
-    queryKey: discussionKeys.threads(sid, page),
-    queryFn: () => fetchSectionThreads(sid, page),
-    enabled: Number.isFinite(sid) && sid > 0,
+    queryKey: discussionKeys.threads(sid ?? 0, page),
+    queryFn: () => fetchSectionThreads(sid!, page),
+    enabled: sid !== null,
   });
 
   const threads = data?.data ?? [];
 
+  if (sid === null) {
+    return (
+      <InvalidParamState
+        message={t('invalidSectionId')}
+        backTo="/student/discuss"
+        backLabel={t('backToDiscussion')}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <Link to="/student/discuss" className="text-sm text-ink/50 transition hover:text-brass">
-        ← {t('backToDiscussion')}
-      </Link>
+      <BackLink to="/student/discuss">{t('backToDiscussion')}</BackLink>
 
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -44,7 +61,15 @@ export function DiscussThreadsPage() {
         </button>
       </header>
 
-      {showForm && <NewThreadForm sectionId={sid} onDone={() => setShowForm(false)} />}
+      {showForm && (
+        <NewThreadForm
+          sectionId={sid}
+          onDone={() => {
+            setShowForm(false);
+            setPage(1);
+          }}
+        />
+      )}
 
       <AsyncPanel
         isLoading={isLoading}
@@ -78,21 +103,10 @@ function ThreadRow({ sectionId, thread }: { sectionId: number; thread: ThreadSum
         to={`/student/discuss/sections/${sectionId}/threads/${thread.id}`}
         className="block px-5 py-4 transition hover:bg-paper/50"
       >
-        <div className="flex flex-wrap items-start gap-2">
-          {thread.is_pinned && (
-            <span className="text-xs font-medium uppercase text-brass">{t('pinned')}</span>
-          )}
-          {thread.is_locked && (
-            <span className="text-xs font-medium uppercase text-ink/45">{t('locked')}</span>
-          )}
-          {thread.is_resolved && (
-            <span className="text-xs font-medium uppercase text-green-700">{t('resolved')}</span>
-          )}
-          <span className="text-xs uppercase text-ink/40">{t(threadTypeLabel(thread.type))}</span>
-        </div>
-        <h2 className="mt-1 font-medium text-ink">{thread.title}</h2>
+        <ThreadBadges thread={thread} />
+        <h2 className="mt-1.5 font-medium text-ink">{thread.title}</h2>
         <p className="mt-1 text-xs text-ink/50">
-          {thread.author?.name ?? '—'} · {t('replyCount', { count: thread.replies_count })}
+          {thread.author?.name ?? '—'} · {replyCountLabel(thread.replies_count, t)}
         </p>
       </Link>
     </li>
@@ -108,7 +122,14 @@ function NewThreadForm({ sectionId, onDone }: { sectionId: number; onDone: () =>
   const [formError, setFormError] = useState<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () => createThread(sectionId, { title, body, type }),
+    mutationFn: () => {
+      const trimmedTitle = trimRequired(title);
+      const trimmedBody = trimRequired(body);
+      if (!trimmedTitle || !trimmedBody) {
+        throw new Error(t('formRequiredFields'));
+      }
+      return createThread(sectionId, { title: trimmedTitle, body: trimmedBody, type });
+    },
     onSuccess: () => {
       setFormError(null);
       setTitle('');
@@ -117,7 +138,7 @@ function NewThreadForm({ sectionId, onDone }: { sectionId: number; onDone: () =>
       onDone();
     },
     onError: (err: Error) => {
-      setFormError(err instanceof ApiError ? err.serverMessage ?? err.message : t('networkError'));
+      setFormError(apiErrorMessage(err, t('networkError'), t('serverError')));
     },
   });
 
@@ -126,6 +147,12 @@ function NewThreadForm({ sectionId, onDone }: { sectionId: number; onDone: () =>
       className="space-y-3 border border-ink/10 bg-white p-5"
       onSubmit={(e) => {
         e.preventDefault();
+        const trimmedTitle = trimRequired(title);
+        const trimmedBody = trimRequired(body);
+        if (!trimmedTitle || !trimmedBody) {
+          setFormError(t('formRequiredFields'));
+          return;
+        }
         mutation.mutate();
       }}
     >

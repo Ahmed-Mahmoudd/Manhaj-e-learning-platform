@@ -426,4 +426,78 @@ class StudentDashboardApiTest extends TestCase
              ->assertJsonPath('progress.progress_pct', 0)
              ->assertJsonPath('progress.completed_at', null);
     }
+
+    #[Test]
+    public function locked_module_lessons_omit_content_in_section_lessons(): void
+    {
+        [
+            'tenant' => $tenant,
+            'student' => $student,
+            'section' => $section,
+            'course' => $course,
+            'module' => $module1,
+            'lesson' => $lesson1,
+        ] = $this->buildTenantWithEnrolledStudent();
+
+        $lesson1->update(['body' => 'Visible body', 'url' => 'https://example.com']);
+
+        $module2 = Module::factory()->create([
+            'tenant_id'               => $tenant->id,
+            'course_id'               => $course->id,
+            'order'                   => 2,
+            'release_after_module_id' => $module1->id,
+            'is_published'            => true,
+        ]);
+        $lesson2 = Lesson::factory()->create([
+            'tenant_id'    => $tenant->id,
+            'module_id'    => $module2->id,
+            'order'        => 1,
+            'is_published' => true,
+            'body'         => 'Locked body',
+            'url'          => 'https://locked.example.com',
+        ]);
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->getJson("/api/v1/student/sections/{$section->id}/lessons")
+             ->assertOk()
+             ->assertJsonPath('modules.1.is_available', false)
+             ->assertJsonPath('modules.1.lessons.0.body', null)
+             ->assertJsonPath('modules.1.lessons.0.url', null)
+             ->assertJsonPath('modules.0.is_available', true)
+             ->assertJsonPath('modules.0.lessons.0.body', 'Visible body');
+    }
+
+    #[Test]
+    public function student_cannot_update_progress_on_locked_module_lesson(): void
+    {
+        [
+            'tenant' => $tenant,
+            'student' => $student,
+            'course' => $course,
+            'module' => $module1,
+        ] = $this->buildTenantWithEnrolledStudent();
+
+        $module2 = Module::factory()->create([
+            'tenant_id'               => $tenant->id,
+            'course_id'               => $course->id,
+            'order'                   => 2,
+            'release_after_module_id' => $module1->id,
+            'is_published'            => true,
+        ]);
+        $lesson2 = Lesson::factory()->create([
+            'tenant_id'    => $tenant->id,
+            'module_id'    => $module2->id,
+            'order'        => 1,
+            'is_published' => true,
+        ]);
+
+        $this->actingAs($student, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->postJson("/api/v1/student/lessons/{$lesson2->id}/progress", [
+                 'progress_pct' => 50,
+             ])
+             ->assertForbidden()
+             ->assertJsonPath('message', 'This module is not yet available.');
+    }
 }

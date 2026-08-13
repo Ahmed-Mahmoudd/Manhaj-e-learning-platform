@@ -1,7 +1,5 @@
-import type { CatalogueCourseSummary } from '@/types/catalogue';
-
 export function courseTitle(
-  course: Pick<CatalogueCourseSummary, 'title_en' | 'title_ar'>,
+  course: { title_en: string; title_ar?: string | null },
   locale: 'en' | 'ar',
 ): string {
   if (locale === 'ar' && course.title_ar) return course.title_ar;

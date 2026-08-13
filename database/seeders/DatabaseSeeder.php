@@ -69,6 +69,8 @@ class DatabaseSeeder extends Seeder
         $this->command->info('✅ Demo data seeded successfully.');
         $this->command->info('   Platform Admin → admin@manhaj.app / password');
         $this->command->info('   CUT Admin      → admin@cut.manhaj.app / password');
+        $this->command->info('   CUT Student    → student@cut.manhaj.app / password');
+        $this->command->info('   CUT Instructor → instructor@cut.manhaj.app / password');
         $this->command->info('   AIS Admin      → admin@ais.manhaj.app / password');
     }
 

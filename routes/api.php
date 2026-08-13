@@ -118,7 +118,7 @@ Route::prefix('v1')->group(function () {
                  });
 
             // ── University Admin ──────────────────────────────────────────────
-            Route::middleware('role:university_admin')
+            Route::middleware('role:university_admin,faculty_admin')
                  ->prefix('admin')
                  ->group(function () {
                      Route::get('faculties',              [FacultyController::class, 'index']);

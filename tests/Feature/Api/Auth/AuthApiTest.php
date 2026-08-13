@@ -85,6 +85,25 @@ class AuthApiTest extends TestCase
         $response->assertStatus(401);
     }
 
+    #[Test]
+    public function login_succeeds_when_tenant_header_does_not_match_user_tenant(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        User::factory()->forTenant($tenantA)->student()->create([
+            'email'    => 'student@cut.manhaj.app',
+            'password' => bcrypt('password'),
+        ]);
+
+        $this->withHeader('X-Tenant-ID', (string) $tenantB->id)
+             ->postJson('/api/v1/auth/login', [
+                 'email'    => 'student@cut.manhaj.app',
+                 'password' => 'password',
+             ])
+             ->assertOk()
+             ->assertJsonPath('user.email', 'student@cut.manhaj.app');
+    }
+
     // ─── Me tests ─────────────────────────────────────────────────────────────
 
     #[Test]

@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -24,19 +25,23 @@ class AuthController extends Controller
      */
     public function login(Request $request): JsonResponse
     {
-        $request->validate([
+        $credentials = $request->validate([
             'email'    => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt($request->only('email', 'password'))) {
+        // Login must not be scoped by X-Tenant-ID — users are looked up globally by email.
+        $user = User::withoutGlobalScope('tenant')
+            ->where('email', $credentials['email'])
+            ->first();
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ])->status(401);
         }
 
         /** @var \App\Models\User $user */
-        $user = Auth::user();
 
         // Revoke any existing tokens to prevent accumulation (optional strategy)
         // Uncomment if you prefer single-session-per-user:

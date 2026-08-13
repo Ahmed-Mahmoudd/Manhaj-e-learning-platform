@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError } from '@/api/client';
-import { dropEnrolment, enrolmentKeys } from '@/api/catalogue';
+import { catalogueKeys, dropEnrolment, enrolmentKeys } from '@/api/catalogue';
 import { fetchMyCourses, studentKeys } from '@/api/student';
 import { AsyncPanel } from '@/components/AsyncPanel';
 import { MarginNote } from '@/components/MarginNote';
@@ -9,6 +8,7 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { TermLedger } from '@/components/TermLedger';
 import { useLocale } from '@/i18n/LocaleContext';
 import type { EnrolledCourse } from '@/types/student';
+import { apiErrorMessage } from '@/utils/apiError';
 
 function courseTitle(course: EnrolledCourse['course'], locale: 'en' | 'ar'): string {
   if (locale === 'ar' && course.title_ar) return course.title_ar;
@@ -83,6 +83,7 @@ function CourseRow({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: studentKeys.courses() });
       queryClient.invalidateQueries({ queryKey: enrolmentKeys.all });
+      queryClient.invalidateQueries({ queryKey: catalogueKeys.all });
     },
   });
 
@@ -100,9 +101,9 @@ function CourseRow({
             ? t('leaveWaitlist')
             : t('dropSection')}
       </button>
-      {dropMutation.error instanceof ApiError && (
+      {dropMutation.error && (
         <p className="mt-1 text-xs text-brick">
-          {dropMutation.error.serverMessage ?? dropMutation.error.message}
+          {apiErrorMessage(dropMutation.error, t('networkError'), t('serverError'))}
         </p>
       )}
     </div>

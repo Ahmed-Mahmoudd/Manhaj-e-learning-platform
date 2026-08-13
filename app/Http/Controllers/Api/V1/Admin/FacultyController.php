@@ -18,7 +18,9 @@ class FacultyController extends Controller
 
     public function store(StoreFacultyRequest $request): JsonResponse
     {
-        $faculty = Faculty::create(['tenant_id' => TenantContext::require()->id, ...$request->validated()]);
+        $data = $request->validated();
+        $data['name_ar'] = $data['name_ar'] ?? $data['name_en'];
+        $faculty = Faculty::create(['tenant_id' => TenantContext::require()->id, ...$data]);
 
         return response()->json(['faculty' => $faculty], 201);
     }

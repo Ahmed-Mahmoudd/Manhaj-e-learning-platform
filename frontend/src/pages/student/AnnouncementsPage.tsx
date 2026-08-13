@@ -9,6 +9,13 @@ import { AsyncPanel } from '@/components/AsyncPanel';
 import { useLocale } from '@/i18n/LocaleContext';
 import type { AnnouncementSummary } from '@/types/announcements';
 import { announcementTypeLabel } from '@/utils/announcementType';
+import {
+  announcementRowClass,
+  announcementTypeBadgeClass,
+  announcementUnreadDotClass,
+} from '@/utils/announcementStyle';
+import { apiErrorMessage } from '@/utils/apiError';
+import { formatAppDate } from '@/utils/formatAppDate';
 
 export function AnnouncementsPage() {
   const { t } = useLocale();
@@ -19,6 +26,7 @@ export function AnnouncementsPage() {
 
   const announcements = data?.announcements ?? [];
   const unreadCount = data?.unread_count ?? 0;
+  const hasUnreadUrgent = announcements.some((a) => !a.is_read && a.type === 'urgent');
 
   return (
     <div className="space-y-8">
@@ -28,7 +36,11 @@ export function AnnouncementsPage() {
           <p className="mt-1 text-sm text-ink/60">{t('announcementsSubtitle')}</p>
         </div>
         {unreadCount > 0 && (
-          <span className="rounded-full bg-brass px-3 py-1 text-xs font-medium text-white">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-medium text-white ${
+              hasUnreadUrgent ? 'bg-brick' : 'bg-brass'
+            }`}
+          >
             {t('unreadCount', { count: unreadCount })}
           </span>
         )}
@@ -51,14 +63,38 @@ export function AnnouncementsPage() {
 }
 
 function AnnouncementRow({ item }: { item: AnnouncementSummary }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
+  const [readError, setReadError] = useState<string | null>(null);
 
   const readMutation = useMutation({
     mutationFn: () => markAnnouncementRead(item.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: announcementKeys.list() });
+    onMutate: async () => {
+      setReadError(null);
+      await queryClient.cancelQueries({ queryKey: announcementKeys.list() });
+      const previous = queryClient.getQueryData<Awaited<ReturnType<typeof fetchAnnouncements>>>(
+        announcementKeys.list(),
+      );
+      if (previous) {
+        queryClient.setQueryData(announcementKeys.list(), {
+          ...previous,
+          unread_count: Math.max(0, previous.unread_count - (item.is_read ? 0 : 1)),
+          announcements: previous.announcements.map((a) =>
+            a.id === item.id ? { ...a, is_read: true } : a,
+          ),
+        });
+      }
+      return { previous };
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(announcementKeys.list(), context.previous);
+      }
+      setReadError(apiErrorMessage(err, t('networkError'), t('serverError'), t));
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: announcementKeys.list() });
     },
   });
 
@@ -70,7 +106,7 @@ function AnnouncementRow({ item }: { item: AnnouncementSummary }) {
   };
 
   return (
-    <li className={`px-5 py-4 ${!item.is_read ? 'bg-brass/5' : ''}`}>
+    <li className={`px-5 py-4 ${announcementRowClass(item.type, !item.is_read)}`}>
       <button
         type="button"
         onClick={() => (expanded ? setExpanded(false) : open())}
@@ -80,9 +116,14 @@ function AnnouncementRow({ item }: { item: AnnouncementSummary }) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               {!item.is_read && (
-                <span className="h-2 w-2 shrink-0 rounded-full bg-brass" aria-hidden />
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${announcementUnreadDotClass(item.type)}`}
+                  aria-hidden
+                />
               )}
-              <span className="font-mono text-xs uppercase text-ink/45">
+              <span
+                className={`font-mono text-xs uppercase ${announcementTypeBadgeClass(item.type)}`}
+              >
                 {t(announcementTypeLabel(item.type))}
               </span>
               <span className="text-xs text-ink/40">{item.section.course_code}</span>
@@ -93,7 +134,7 @@ function AnnouncementRow({ item }: { item: AnnouncementSummary }) {
               {item.published_at && (
                 <>
                   {' · '}
-                  {formatDate(item.published_at)}
+                  {formatAppDate(item.published_at, locale)}
                 </>
               )}
             </p>
@@ -104,20 +145,13 @@ function AnnouncementRow({ item }: { item: AnnouncementSummary }) {
       {expanded && (
         <div className="mt-4 border-t border-ink/10 pt-4 text-sm leading-relaxed text-ink/80 whitespace-pre-wrap">
           {item.body}
+          {readError && (
+            <p className="mt-3 text-xs text-brick" role="alert">
+              {readError}
+            </p>
+          )}
         </div>
       )}
     </li>
   );
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return iso;
-  }
 }

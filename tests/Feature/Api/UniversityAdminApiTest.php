@@ -114,6 +114,18 @@ class UniversityAdminApiTest extends TestCase
     }
 
     #[Test]
+    public function admin_can_create_department_without_name_ar(): void
+    {
+        ['tenant' => $tenant, 'admin' => $admin, 'faculty' => $faculty] = $this->scaffold();
+        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
+             ->postJson('/api/v1/admin/departments', [
+                 'faculty_id' => $faculty->id, 'name_en' => 'Information Systems', 'code' => 'IS',
+             ])->assertCreated()
+               ->assertJsonPath('department.code', 'IS')
+               ->assertJsonPath('department.name_ar', 'Information Systems');
+    }
+
+    #[Test]
     public function admin_can_filter_departments_by_faculty(): void
     {
         ['tenant' => $tenant, 'admin' => $admin, 'faculty' => $faculty] = $this->scaffold();

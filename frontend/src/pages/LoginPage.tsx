@@ -35,13 +35,13 @@ export function LoginPage() {
             mapped[field] = messages[0] ?? '';
           }
           setFieldErrors(mapped);
-          if (!Object.keys(mapped).length && err.serverMessage) {
-            setGeneralError(err.serverMessage);
+          if (!Object.keys(mapped).length) {
+            setGeneralError(
+              err.userMessage(t('credentialsError'), t('serverError')),
+            );
           }
-        } else if (err.serverMessage) {
-          setGeneralError(err.serverMessage);
         } else {
-          setGeneralError(t('credentialsError'));
+          setGeneralError(err.userMessage(t('credentialsError'), t('serverError')));
         }
       } else {
         setGeneralError(t('networkError'));
@@ -118,7 +118,10 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 font-mono text-xs text-ink/40">{t('demoHint')}</p>
+          <div className="mt-6 space-y-1 font-mono text-xs text-ink/50">
+            <p>{t('demoHint')}</p>
+            <p>{t('demoAccounts')}</p>
+          </div>
         </div>
       </div>
     </div>

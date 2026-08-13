@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError } from '@/api/client';
 import { storageFileUrl } from '@/api/config';
 import {
   fetchSectionLessons,
@@ -10,29 +9,33 @@ import {
   updateLessonProgress,
 } from '@/api/student';
 import { AsyncPanel } from '@/components/AsyncPanel';
+import { BackLink } from '@/components/BackLink';
+import { InvalidParamState } from '@/components/InvalidParamState';
 import { LessonVideoPlayer, type LessonVideoPlayerHandle } from '@/components/LessonVideoPlayer';
 import { ProgressBar } from '@/components/ProgressBar';
 import { useLocale } from '@/i18n/LocaleContext';
+import { apiErrorMessage } from '@/utils/apiError';
 import { lessonTypeLabel } from '@/utils/lessonType';
+import { parseRouteId } from '@/utils/routeParams';
 import { resolveVideoSource } from '@/utils/videoSource';
-import type { LessonSummary, SectionLessonsResponse } from '@/types/student';
+import type { CourseModule, LessonSummary, SectionLessonsResponse } from '@/types/student';
 
-function findLesson(
-  modules: { lessons: LessonSummary[] }[] | undefined,
+function findLessonContext(
+  modules: CourseModule[] | undefined,
   lessonId: number,
-): LessonSummary | undefined {
+): { lesson: LessonSummary; module: CourseModule } | undefined {
   if (!modules) return undefined;
   for (const mod of modules) {
     const found = mod.lessons.find((l) => l.id === lessonId);
-    if (found) return found;
+    if (found) return { lesson: found, module: mod };
   }
   return undefined;
 }
 
 export function LessonViewerPage() {
   const { sectionId, lessonId } = useParams<{ sectionId: string; lessonId: string }>();
-  const sid = Number(sectionId);
-  const lid = Number(lessonId);
+  const sid = parseRouteId(sectionId);
+  const lid = parseRouteId(lessonId);
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -41,15 +44,17 @@ export function LessonViewerPage() {
   const videoPlayerRef = useRef<LessonVideoPlayerHandle>(null);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: studentKeys.sectionLessons(sid),
-    queryFn: () => fetchSectionLessons(sid),
-    enabled: Number.isFinite(sid) && sid > 0,
+    queryKey: studentKeys.sectionLessons(sid ?? 0),
+    queryFn: () => fetchSectionLessons(sid!),
+    enabled: sid !== null,
   });
 
-  const lesson = useMemo(
-    () => findLesson(data?.modules, lid),
+  const lessonContext = useMemo(
+    () => (lid !== null ? findLessonContext(data?.modules, lid) : undefined),
     [data?.modules, lid],
   );
+  const lesson = lessonContext?.lesson;
+  const moduleLocked = lessonContext != null && !lessonContext.module.is_available;
 
   useEffect(() => {
     setLiveProgressPct(null);
@@ -65,7 +70,7 @@ export function LessonViewerPage() {
       };
     }) => {
       queryClient.setQueryData<SectionLessonsResponse>(
-        studentKeys.sectionLessons(sid),
+        studentKeys.sectionLessons(sid ?? 0),
         (old) => {
           if (!old) return old;
           return {
@@ -95,20 +100,18 @@ export function LessonViewerPage() {
 
   const progressMutation = useMutation({
     mutationFn: (payload: { seconds_spent?: number; progress_pct?: number }) =>
-      updateLessonProgress(lid, payload),
+      updateLessonProgress(lid!, payload),
     onSuccess: (response) => {
       setSaveError(null);
       applyProgressToCache(response);
     },
     onError: (err: Error) => {
-      setSaveError(
-        err instanceof ApiError ? err.serverMessage ?? err.message : t('networkError'),
-      );
+      setSaveError(apiErrorMessage(err, t('networkError'), t('serverError')));
     },
   });
 
   const resetMutation = useMutation({
-    mutationFn: () => resetLessonProgress(lid),
+    mutationFn: () => resetLessonProgress(lid!),
     onSuccess: (response) => {
       setSaveError(null);
       setLiveProgressPct(0);
@@ -116,9 +119,7 @@ export function LessonViewerPage() {
       applyProgressToCache(response);
     },
     onError: (err: Error) => {
-      setSaveError(
-        err instanceof ApiError ? err.serverMessage ?? err.message : t('networkError'),
-      );
+      setSaveError(apiErrorMessage(err, t('networkError'), t('serverError')));
     },
   });
 
@@ -189,14 +190,19 @@ export function LessonViewerPage() {
   const isComplete = displayProgressPct >= 100;
   const isBusy = progressMutation.isPending || resetMutation.isPending;
 
+  if (sid === null || lid === null) {
+    return (
+      <InvalidParamState
+        message={t('invalidSectionId')}
+        backTo="/student"
+        backLabel={t('backToCourses')}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <Link
-        to={`/student/sections/${sid}`}
-        className="text-sm text-ink/50 transition hover:text-brass"
-      >
-        ← {t('backToLessons')}
-      </Link>
+      <BackLink to={`/student/sections/${sid}`}>{t('backToLessons')}</BackLink>
 
       <AsyncPanel
         isLoading={isLoading}
@@ -218,17 +224,24 @@ export function LessonViewerPage() {
               </header>
 
               <div className="px-5 py-6">
-                <LessonContent
-                  lesson={lesson}
-                  lessonId={lid}
-                  playerResetKey={playerResetKey}
-                  videoPlayerRef={videoPlayerRef}
-                  onProgress={lesson.type === 'video' ? stableVideoProgress : saveProgress}
-                />
+                {moduleLocked ? (
+                  <div className="space-y-2 border border-ink/10 bg-paper px-4 py-6 text-center">
+                    <p className="text-sm font-medium text-ink">{t('lessonModuleLocked')}</p>
+                    <p className="text-sm text-ink/55">{t('lessonModuleLockedHint')}</p>
+                  </div>
+                ) : (
+                  <LessonContent
+                    lesson={lesson}
+                    lessonId={lid}
+                    playerResetKey={playerResetKey}
+                    videoPlayerRef={videoPlayerRef}
+                    onProgress={lesson.type === 'video' ? stableVideoProgress : saveProgress}
+                  />
+                )}
               </div>
 
               <footer className="flex flex-wrap items-center gap-3 border-t border-ink/10 px-5 py-4">
-                {!isComplete && (
+                {!moduleLocked && !isComplete && (
                   <button
                     type="button"
                     disabled={isBusy}
@@ -238,7 +251,7 @@ export function LessonViewerPage() {
                     {progressMutation.isPending ? t('saving') : t('markComplete')}
                   </button>
                 )}
-                {isComplete && (
+                {!moduleLocked && isComplete && (
                   <button
                     type="button"
                     disabled={isBusy}
@@ -373,7 +386,7 @@ function LessonSidebar({
   sectionId,
   currentId,
 }: {
-  modules: { id: number; title: string; lessons: LessonSummary[] }[];
+  modules: CourseModule[];
   sectionId: number;
   currentId: number;
 }) {
@@ -384,22 +397,39 @@ function LessonSidebar({
       <p className="mb-2 text-xs text-ink/45">{t('inThisSection')}</p>
       {modules.map((mod) => (
         <div key={mod.id} className="mb-3">
-          <p className="truncate text-xs font-medium text-ink/55">{mod.title}</p>
+          <p className="truncate text-xs font-medium text-ink/55">
+            {mod.title}
+            {!mod.is_available && (
+              <span className="ms-1 text-ink/40">({t('locked')})</span>
+            )}
+          </p>
           <ul className="mt-1 space-y-0.5">
-            {mod.lessons.map((l) => (
-              <li key={l.id}>
-                <Link
-                  to={`/student/sections/${sectionId}/lessons/${l.id}`}
-                  className={`block truncate px-2 py-1 text-xs ${
-                    l.id === currentId
-                      ? 'bg-brass/15 font-medium text-ink'
-                      : 'text-ink/55 hover:bg-paper'
-                  }`}
-                >
-                  {l.title}
-                </Link>
-              </li>
-            ))}
+            {mod.lessons.map((l) => {
+              const locked = !mod.is_available;
+              const className = `block truncate px-2 py-1 text-xs ${
+                l.id === currentId
+                  ? 'bg-brass/15 font-medium text-ink'
+                  : locked
+                    ? 'cursor-not-allowed text-ink/30'
+                    : 'text-ink/55 hover:bg-paper'
+              }`;
+
+              if (locked) {
+                return (
+                  <li key={l.id}>
+                    <span className={className}>{l.title}</span>
+                  </li>
+                );
+              }
+
+              return (
+                <li key={l.id}>
+                  <Link to={`/student/sections/${sectionId}/lessons/${l.id}`} className={className}>
+                    {l.title}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ))}

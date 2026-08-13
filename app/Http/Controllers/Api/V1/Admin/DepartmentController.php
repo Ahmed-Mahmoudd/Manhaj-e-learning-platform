@@ -23,7 +23,9 @@ class DepartmentController extends Controller
 
     public function store(StoreDepartmentRequest $request): JsonResponse
     {
-        $dept = Department::create(['tenant_id' => TenantContext::require()->id, ...$request->validated()]);
+        $data = $request->validated();
+        $data['name_ar'] = $data['name_ar'] ?? $data['name_en'];
+        $dept = Department::create(['tenant_id' => TenantContext::require()->id, ...$data]);
 
         return response()->json(['department' => $dept->load('faculty')], 201);
     }
@@ -35,7 +37,11 @@ class DepartmentController extends Controller
 
     public function update(UpdateDepartmentRequest $request, Department $department): JsonResponse
     {
-        $department->update($request->validated());
+        $data = $request->validated();
+        if (array_key_exists('name_en', $data) && ! array_key_exists('name_ar', $data)) {
+            $data['name_ar'] = $department->name_ar ?: $data['name_en'];
+        }
+        $department->update($data);
         return response()->json(['department' => $department->fresh()]);
     }
 

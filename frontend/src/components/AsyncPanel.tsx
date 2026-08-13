@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
-import { ApiError } from '@/api/client';
 import { useLocale } from '@/i18n/LocaleContext';
+import { apiErrorMessage } from '@/utils/apiError';
 
 interface AsyncPanelProps {
   isLoading: boolean;
@@ -30,10 +30,7 @@ export function AsyncPanel({
   }
 
   if (error) {
-    const message =
-      error instanceof ApiError
-        ? error.serverMessage ?? error.message
-        : t('networkError');
+    const message = apiErrorMessage(error, t('networkError'), t('serverError'), t);
     return (
       <div
         className="border border-brick/30 bg-brick/5 px-6 py-8"

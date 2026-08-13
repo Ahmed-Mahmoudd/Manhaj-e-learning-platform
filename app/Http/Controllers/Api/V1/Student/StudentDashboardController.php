@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Enrolment;
 use App\Models\Lesson;
 use App\Models\Section;
+use App\Models\User;
 use App\Services\LessonProgressService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -106,27 +107,33 @@ class StudentDashboardController extends Controller
         $modules = $section->course->modules()
             ->where('is_published', true)
             ->orderBy('order')
-            ->with(['lessons' => fn($q) => $q->where('is_published', true)->orderBy('order')])
+            ->with([
+                'releaseAfterModule.lessons',
+                'lessons' => fn ($q) => $q->where('is_published', true)->orderBy('order'),
+            ])
             ->get();
 
         $data = $modules->map(function ($module) use ($student) {
+            $available = $module->isAvailableTo($student);
+
             return [
-                'id'          => $module->id,
-                'title'       => $module->title,
-                'order'       => $module->order,
-                'is_available'=> $module->isAvailableTo($student),
-                'lessons'     => $module->lessons->map(function (Lesson $lesson) use ($student) {
+                'id'           => $module->id,
+                'title'        => $module->title,
+                'order'        => $module->order,
+                'is_available' => $available,
+                'lessons'      => $module->lessons->map(function (Lesson $lesson) use ($student, $available) {
                     $progress = $lesson->progressFor($student);
+
                     return [
                         'id'               => $lesson->id,
                         'title'            => $lesson->title,
                         'type'             => $lesson->type,
-                        'body'             => $lesson->body,
-                        'url'              => $lesson->url,
-                        'file_path'        => $lesson->file_path,
+                        'body'             => $available ? $lesson->body : null,
+                        'url'              => $available ? $lesson->url : null,
+                        'file_path'        => $available ? $lesson->file_path : null,
                         'order'            => $lesson->order,
-                        'duration_seconds' => $lesson->duration_seconds,
-                        'progress' => $progress ? [
+                        'duration_seconds' => $available ? $lesson->duration_seconds : null,
+                        'progress'         => $progress ? [
                             'seconds_spent' => $progress->seconds_spent,
                             'progress_pct'  => $progress->progress_pct,
                             'completed_at'  => $progress->completed_at,
@@ -154,7 +161,9 @@ class StudentDashboardController extends Controller
             'progress_pct'  => ['required_without:seconds_spent', 'integer', 'min:0', 'max:100'],
         ]);
 
-        $student  = $request->user();
+        $student = $request->user();
+        $this->authorizeLessonAccess($student, $lesson);
+
         $progress = $this->progressService->updateProgress(
             $student,
             $lesson,
@@ -179,7 +188,9 @@ class StudentDashboardController extends Controller
      */
     public function resetProgress(Request $request, Lesson $lesson): JsonResponse
     {
-        $student  = $request->user();
+        $student = $request->user();
+        $this->authorizeLessonAccess($student, $lesson);
+
         $progress = $this->progressService->resetProgress($student, $lesson);
 
         return response()->json([
@@ -190,5 +201,38 @@ class StudentDashboardController extends Controller
                 'completed_at'  => $progress->completed_at,
             ],
         ]);
+    }
+
+    /**
+     * Ensure the student is enrolled and the lesson's module is unlocked.
+     */
+    private function authorizeLessonAccess(User $student, Lesson $lesson): void
+    {
+        $lesson->loadMissing('module.course');
+
+        $module = $lesson->module;
+        if (! $module) {
+            abort(404, 'Lesson not found.');
+        }
+
+        $enrolled = Enrolment::withoutGlobalScope('tenant')
+            ->where('student_id', $student->id)
+            ->where('status', 'enrolled')
+            ->whereHas('section', fn ($q) => $q->where('course_id', $module->course_id))
+            ->exists();
+
+        if (! $enrolled) {
+            abort(403, 'Not enrolled in this course.');
+        }
+
+        $module->loadMissing('releaseAfterModule.lessons');
+
+        if (! $module->isAvailableTo($student)) {
+            abort(403, 'This module is not yet available.');
+        }
+
+        if (! $lesson->isReleasedNow()) {
+            abort(403, 'This lesson is not yet available.');
+        }
     }
 }

@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError } from '@/api/client';
 import {
   addThreadPost,
   discussionKeys,
@@ -9,50 +8,72 @@ import {
   togglePostVote,
 } from '@/api/discussion';
 import { AsyncPanel } from '@/components/AsyncPanel';
+import { BackLink } from '@/components/BackLink';
+import { InvalidParamState } from '@/components/InvalidParamState';
 import { useLocale } from '@/i18n/LocaleContext';
+import { apiErrorMessage } from '@/utils/apiError';
+import { trimRequired } from '@/utils/formText';
+import { parseRouteId } from '@/utils/routeParams';
 import type { DiscussionPost } from '@/types/discussion';
 import { threadTypeLabel } from '@/utils/threadType';
 
 export function DiscussThreadPage() {
   const { sectionId, threadId } = useParams<{ sectionId: string; threadId: string }>();
-  const sid = Number(sectionId);
-  const tid = Number(threadId);
+  const sid = parseRouteId(sectionId);
+  const tid = parseRouteId(threadId);
   const { t } = useLocale();
   const [reply, setReply] = useState('');
   const [replyError, setReplyError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: discussionKeys.thread(tid),
-    queryFn: () => fetchThread(tid),
-    enabled: Number.isFinite(tid) && tid > 0,
+    queryKey: discussionKeys.thread(tid ?? 0),
+    queryFn: () => fetchThread(tid!),
+    enabled: tid !== null,
   });
 
   const replyMutation = useMutation({
-    mutationFn: () => addThreadPost(tid, { body: reply }),
+    mutationFn: () => {
+      const trimmed = trimRequired(reply);
+      if (!trimmed) throw new Error(t('formRequiredFields'));
+      return addThreadPost(tid!, { body: trimmed });
+    },
     onSuccess: () => {
       setReply('');
       setReplyError(null);
-      void queryClient.invalidateQueries({ queryKey: discussionKeys.thread(tid) });
+      void queryClient.invalidateQueries({ queryKey: discussionKeys.thread(tid!) });
       void queryClient.invalidateQueries({ queryKey: discussionKeys.all });
     },
     onError: (err: Error) => {
-      setReplyError(
-        err instanceof ApiError ? err.serverMessage ?? err.message : t('networkError'),
-      );
+      setReplyError(apiErrorMessage(err, t('networkError'), t('serverError')));
     },
   });
 
   const thread = data?.thread;
 
+  if (sid === null) {
+    return (
+      <InvalidParamState
+        message={t('invalidSectionId')}
+        backTo="/student/discuss"
+        backLabel={t('backToDiscussion')}
+      />
+    );
+  }
+
+  if (tid === null) {
+    return (
+      <InvalidParamState
+        message={t('threadNotFound')}
+        backTo={`/student/discuss/sections/${sid}`}
+        backLabel={t('backToThreads')}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <Link
-        to={`/student/discuss/sections/${sid}`}
-        className="text-sm text-ink/50 transition hover:text-brass"
-      >
-        ← {t('backToThreads')}
-      </Link>
+      <BackLink to={`/student/discuss/sections/${sid}`}>{t('backToThreads')}</BackLink>
 
       <AsyncPanel
         isLoading={isLoading}
@@ -78,9 +99,13 @@ export function DiscussThreadPage() {
 
             <section className="space-y-4">
               <h2 className="text-sm font-medium text-ink/70">{t('replies')}</h2>
-              {(data?.posts ?? []).map((post) => (
-                <PostCard key={post.id} post={post} threadId={tid} locked={thread.is_locked} />
-              ))}
+              {(data?.posts ?? []).length === 0 ? (
+                <p className="text-sm text-ink/50">{t('noReplies')}</p>
+              ) : (
+                (data?.posts ?? []).map((post) => (
+                  <PostCard key={post.id} post={post} threadId={tid} locked={thread.is_locked} />
+                ))
+              )}
             </section>
 
             {!thread.is_locked ? (
@@ -88,6 +113,10 @@ export function DiscussThreadPage() {
                 className="space-y-3 border border-ink/10 bg-white p-5"
                 onSubmit={(e) => {
                   e.preventDefault();
+                  if (!trimRequired(reply)) {
+                    setReplyError(t('formRequiredFields'));
+                    return;
+                  }
                   replyMutation.mutate();
                 }}
               >
@@ -133,11 +162,16 @@ function PostCard({
 }) {
   const { t } = useLocale();
   const queryClient = useQueryClient();
+  const [voteError, setVoteError] = useState<string | null>(null);
 
   const voteMutation = useMutation({
     mutationFn: () => togglePostVote(post.id),
     onSuccess: () => {
+      setVoteError(null);
       void queryClient.invalidateQueries({ queryKey: discussionKeys.thread(threadId) });
+    },
+    onError: (err: Error) => {
+      setVoteError(apiErrorMessage(err, t('networkError'), t('serverError'), t));
     },
   });
 
@@ -155,14 +189,21 @@ function PostCard({
           )}
         </div>
         {!locked && (
-          <button
-            type="button"
-            disabled={voteMutation.isPending}
-            onClick={() => voteMutation.mutate()}
-            className={`text-xs font-mono ${post.has_voted ? 'text-brass' : 'text-ink/45'}`}
-          >
-            ▲ {post.upvotes_count}
-          </button>
+          <div className="text-end">
+            <button
+              type="button"
+              disabled={voteMutation.isPending}
+              onClick={() => voteMutation.mutate()}
+              className={`text-xs font-mono ${post.has_voted ? 'text-brass' : 'text-ink/45'}`}
+            >
+              ▲ {post.upvotes_count}
+            </button>
+            {voteError && (
+              <p className="mt-1 text-[10px] text-brick" role="alert">
+                {voteError}
+              </p>
+            )}
+          </div>
         )}
       </div>
       <p className="mt-2 whitespace-pre-wrap text-sm text-ink/85">{post.body}</p>
