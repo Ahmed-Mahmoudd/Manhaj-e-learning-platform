@@ -18,9 +18,10 @@ import { announcementTypeLabel } from '@/utils/announcementType';
 import {
   announcementRowClass,
   announcementTypeBadgeClass,
+  announcementUrgentBadgeClass,
 } from '@/utils/announcementStyle';
 
-const ANNOUNCEMENT_TYPES: AnnouncementType[] = ['general', 'assignment', 'exam', 'urgent'];
+const ANNOUNCEMENT_TYPES: AnnouncementType[] = ['general', 'assignment', 'exam'];
 
 export function SectionAnnouncementsPage() {
   const sid = useInstructorSectionId();
@@ -101,7 +102,7 @@ function AnnouncementRow({
   });
 
   return (
-    <li className={`px-5 py-4 ${announcementRowClass(item.type)}`}>
+    <li className={`px-5 py-4 ${announcementRowClass(item.is_urgent)}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <button
           type="button"
@@ -117,9 +118,17 @@ function AnnouncementRow({
             )}
           </div>
           <p className="mt-1 text-xs text-ink/50">
-            <span className={`uppercase ${announcementTypeBadgeClass(item.type)}`}>
+            <span className={`uppercase ${announcementTypeBadgeClass()}`}>
               {t(announcementTypeLabel(item.type))}
             </span>
+            {item.is_urgent && (
+              <>
+                {' · '}
+                <span className={`uppercase ${announcementUrgentBadgeClass()}`}>
+                  {t('announcementUrgent')}
+                </span>
+              </>
+            )}
             {item.is_published && item.published_at && (
               <> · {formatAppDate(item.published_at, locale)}</>
             )}
@@ -165,12 +174,19 @@ function NewAnnouncementForm({
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [type, setType] = useState<AnnouncementType>('general');
+  const [isUrgent, setIsUrgent] = useState(false);
   const [publishNow, setPublishNow] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: () =>
-      createSectionAnnouncement(sectionId, { title, body, type, publish_now: publishNow }),
+      createSectionAnnouncement(sectionId, {
+        title,
+        body,
+        type,
+        is_urgent: isUrgent,
+        publish_now: publishNow,
+      }),
     onSuccess: () => {
       setFormError(null);
       setTitle('');
@@ -210,6 +226,14 @@ function NewAnnouncementForm({
           </option>
         ))}
       </select>
+      <label className="flex items-center gap-2 text-sm text-ink/70">
+        <input
+          type="checkbox"
+          checked={isUrgent}
+          onChange={(e) => setIsUrgent(e.target.checked)}
+        />
+        {t('markAsUrgent')}
+      </label>
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}

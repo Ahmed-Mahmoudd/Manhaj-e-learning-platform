@@ -18,6 +18,7 @@ class StoreAnnouncementRequest extends FormRequest
             'title'       => ['required', 'string', 'max:255'],
             'body'        => ['required', 'string'],
             'type'        => ['required', 'string', 'in:' . implode(',', Announcement::TYPES)],
+            'is_urgent'   => ['boolean'],
             'publish_now' => ['boolean'],
         ];
     }

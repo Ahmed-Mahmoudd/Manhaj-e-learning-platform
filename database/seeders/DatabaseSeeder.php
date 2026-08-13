@@ -363,7 +363,8 @@ class DatabaseSeeder extends Seeder
     ): void {
         $rows = [
             [
-                'type'         => 'urgent',
+                'type'         => 'general',
+                'is_urgent'    => true,
                 'title'        => 'Thursday lab moved to Room B204',
                 'body'         => "This week's lab session on Thursday has been moved from A101 to **B204** due to maintenance.\n\nPlease arrive 10 minutes early so we can start on time. Bring your laptop and the Week 3 worksheet.",
                 'published_at' => now()->subHours(3),
@@ -405,6 +406,7 @@ class DatabaseSeeder extends Seeder
                 'section_id'   => $section->id,
                 'author_id'    => $instructor->id,
                 'type'         => $row['type'],
+                'is_urgent'    => $row['is_urgent'] ?? false,
                 'title'        => $row['title'],
                 'body'         => $row['body'],
                 'is_published' => true,

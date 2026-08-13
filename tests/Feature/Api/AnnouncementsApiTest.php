@@ -248,6 +248,109 @@ class AnnouncementsApiTest extends TestCase
              ])
              ->assertUnprocessable()
              ->assertJsonValidationErrors(['type']);
+
+        $this->actingAs($instructor, 'sanctum')
+             ->withHeaders($this->headers($tenant))
+             ->postJson("/api/v1/instructor/sections/{$section->id}/announcements", [
+                 'title' => 'Test', 'body' => 'Test', 'type' => 'urgent',
+             ])
+             ->assertUnprocessable()
+             ->assertJsonValidationErrors(['type']);
+    }
+
+    #[Test]
+    public function instructor_can_create_urgent_exam_announcement(): void
+    {
+        ['tenant' => $tenant, 'instructor' => $instructor, 'section' => $section] = $this->scaffold();
+
+        $this->actingAs($instructor, 'sanctum')
+             ->withHeaders($this->headers($tenant))
+             ->postJson("/api/v1/instructor/sections/{$section->id}/announcements", [
+                 'title'       => 'Exam moved',
+                 'body'        => 'New date Friday.',
+                 'type'        => 'exam',
+                 'is_urgent'   => true,
+                 'publish_now' => true,
+             ])
+             ->assertCreated()
+             ->assertJsonPath('announcement.type', 'exam')
+             ->assertJsonPath('announcement.is_urgent', true);
+    }
+
+    #[Test]
+    public function instructor_can_create_non_urgent_exam_announcement(): void
+    {
+        ['tenant' => $tenant, 'instructor' => $instructor, 'section' => $section] = $this->scaffold();
+
+        $this->actingAs($instructor, 'sanctum')
+             ->withHeaders($this->headers($tenant))
+             ->postJson("/api/v1/instructor/sections/{$section->id}/announcements", [
+                 'title'       => 'Exam reminder',
+                 'body'        => 'Study chapters 1-3.',
+                 'type'        => 'exam',
+                 'is_urgent'   => false,
+                 'publish_now' => true,
+             ])
+             ->assertCreated()
+             ->assertJsonPath('announcement.type', 'exam')
+             ->assertJsonPath('announcement.is_urgent', false);
+    }
+
+    #[Test]
+    public function instructor_can_create_urgent_assignment_announcement(): void
+    {
+        ['tenant' => $tenant, 'instructor' => $instructor, 'section' => $section] = $this->scaffold();
+
+        $this->actingAs($instructor, 'sanctum')
+             ->withHeaders($this->headers($tenant))
+             ->postJson("/api/v1/instructor/sections/{$section->id}/announcements", [
+                 'title'     => 'Due tonight',
+                 'body'      => 'Submit by midnight.',
+                 'type'      => 'assignment',
+                 'is_urgent' => true,
+             ])
+             ->assertCreated()
+             ->assertJsonPath('announcement.type', 'assignment')
+             ->assertJsonPath('announcement.is_urgent', true);
+    }
+
+    #[Test]
+    public function instructor_can_create_urgent_general_announcement(): void
+    {
+        ['tenant' => $tenant, 'instructor' => $instructor, 'section' => $section] = $this->scaffold();
+
+        $this->actingAs($instructor, 'sanctum')
+             ->withHeaders($this->headers($tenant))
+             ->postJson("/api/v1/instructor/sections/{$section->id}/announcements", [
+                 'title'     => 'Class cancelled',
+                 'body'      => 'No lecture today.',
+                 'type'      => 'general',
+                 'is_urgent' => true,
+             ])
+             ->assertCreated()
+             ->assertJsonPath('announcement.type', 'general')
+             ->assertJsonPath('announcement.is_urgent', true);
+    }
+
+    #[Test]
+    public function student_feed_includes_is_urgent_separately_from_type(): void
+    {
+        ['tenant' => $tenant, 'section' => $section, 'instructor' => $instructor, 'student' => $student] =
+            $this->scaffold();
+
+        $service = app(AnnouncementService::class);
+        $service->create($section, $instructor, [
+            'title' => 'Urgent exam', 'body' => 'B', 'type' => 'exam', 'is_urgent' => true,
+        ]);
+
+        $response = $this->actingAs($student, 'sanctum')
+                         ->withHeaders($this->headers($tenant))
+                         ->getJson('/api/v1/student/announcements')
+                         ->assertOk();
+
+        $item = $response->json('announcements.0');
+        $this->assertEquals('exam', $item['type']);
+        $this->assertTrue($item['is_urgent']);
     }
 
     #[Test]
@@ -274,7 +377,12 @@ class AnnouncementsApiTest extends TestCase
 
         $service = app(AnnouncementService::class);
         $a1 = $service->create($section, $instructor, ['title' => 'First',  'body' => 'B', 'type' => 'general']);
-        $a2 = $service->create($section, $instructor, ['title' => 'Second', 'body' => 'B', 'type' => 'urgent']);
+        $a2 = $service->create($section, $instructor, [
+            'title'     => 'Second',
+            'body'      => 'B',
+            'type'      => 'exam',
+            'is_urgent' => true,
+        ]);
 
         // Mark first as read
         $service->markRead($a1, $student);

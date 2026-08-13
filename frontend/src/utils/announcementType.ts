@@ -5,7 +5,6 @@ const TYPE_KEYS: Record<AnnouncementType, MessageKey> = {
   general: 'announcementType_general',
   assignment: 'announcementType_assignment',
   exam: 'announcementType_exam',
-  urgent: 'announcementType_urgent',
 };
 
 export function announcementTypeLabel(type: string): MessageKey {

@@ -36,6 +36,7 @@ class AnnouncementService
             'section_id'   => $section->id,
             'author_id'    => $author->id,
             'type'         => $data['type'] ?? 'general',
+            'is_urgent'    => (bool) ($data['is_urgent'] ?? false),
             'title'        => $data['title'],
             'body'         => $data['body'],
             'is_published' => $publishNow,

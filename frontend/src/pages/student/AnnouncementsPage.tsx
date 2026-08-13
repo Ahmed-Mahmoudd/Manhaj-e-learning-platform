@@ -12,6 +12,7 @@ import { announcementTypeLabel } from '@/utils/announcementType';
 import {
   announcementRowClass,
   announcementTypeBadgeClass,
+  announcementUrgentBadgeClass,
   announcementUnreadDotClass,
 } from '@/utils/announcementStyle';
 import { apiErrorMessage } from '@/utils/apiError';
@@ -26,7 +27,7 @@ export function AnnouncementsPage() {
 
   const announcements = data?.announcements ?? [];
   const unreadCount = data?.unread_count ?? 0;
-  const hasUnreadUrgent = announcements.some((a) => !a.is_read && a.type === 'urgent');
+  const hasUnreadUrgent = announcements.some((a) => !a.is_read && a.is_urgent);
 
   return (
     <div className="space-y-8">
@@ -106,7 +107,7 @@ function AnnouncementRow({ item }: { item: AnnouncementSummary }) {
   };
 
   return (
-    <li className={`px-5 py-4 ${announcementRowClass(item.type, !item.is_read)}`}>
+    <li className={`px-5 py-4 ${announcementRowClass(item.is_urgent, !item.is_read)}`}>
       <button
         type="button"
         onClick={() => (expanded ? setExpanded(false) : open())}
@@ -117,15 +118,22 @@ function AnnouncementRow({ item }: { item: AnnouncementSummary }) {
             <div className="flex flex-wrap items-center gap-2">
               {!item.is_read && (
                 <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${announcementUnreadDotClass(item.type)}`}
+                  className={`h-2 w-2 shrink-0 rounded-full ${announcementUnreadDotClass(item.is_urgent)}`}
                   aria-hidden
                 />
               )}
               <span
-                className={`font-mono text-xs uppercase ${announcementTypeBadgeClass(item.type)}`}
+                className={`font-mono text-xs uppercase ${announcementTypeBadgeClass()}`}
               >
                 {t(announcementTypeLabel(item.type))}
               </span>
+              {item.is_urgent && (
+                <span
+                  className={`font-mono text-xs uppercase ${announcementUrgentBadgeClass()}`}
+                >
+                  {t('announcementUrgent')}
+                </span>
+              )}
               <span className="text-xs text-ink/40">{item.section.course_code}</span>
             </div>
             <h2 className="mt-1 text-base font-medium text-ink">{item.title}</h2>

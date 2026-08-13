@@ -73,6 +73,7 @@ export function createSectionAnnouncement(
     title: string;
     body: string;
     type: AnnouncementType;
+    is_urgent?: boolean;
     publish_now?: boolean;
   },
 ) {

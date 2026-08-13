@@ -85,6 +85,7 @@ class AnnouncementController extends Controller
             'title'        => $a->title,
             'body'         => $a->body,
             'type'         => $a->type,
+            'is_urgent'    => $a->is_urgent,
             'is_published' => $a->is_published,
             'published_at' => $a->published_at,
             'created_at'   => $a->created_at,

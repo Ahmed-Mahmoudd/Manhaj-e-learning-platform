@@ -100,6 +100,7 @@ export interface InstructorAnnouncement {
   title: string;
   body: string;
   type: string;
+  is_urgent: boolean;
   is_published: boolean;
   published_at: string | null;
   created_at: string | null;

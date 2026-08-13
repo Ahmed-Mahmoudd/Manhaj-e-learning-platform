@@ -13,17 +13,18 @@ class Announcement extends Model
 {
     use HasFactory, BelongsToTenant;
 
-    const TYPES = ['general', 'assignment', 'exam', 'urgent'];
+    const TYPES = ['general', 'assignment', 'exam'];
 
     protected $fillable = [
         'tenant_id', 'section_id', 'author_id',
-        'type', 'title', 'body',
+        'type', 'is_urgent', 'title', 'body',
         'is_published', 'published_at',
     ];
 
     protected function casts(): array
     {
         return [
+            'is_urgent'    => 'boolean',
             'is_published' => 'boolean',
             'published_at' => 'datetime',
         ];
@@ -56,6 +57,6 @@ class Announcement extends Model
 
     public function isUrgent(): bool
     {
-        return $this->type === 'urgent';
+        return (bool) $this->is_urgent;
     }
 }

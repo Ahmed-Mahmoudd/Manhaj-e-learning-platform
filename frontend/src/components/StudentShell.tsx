@@ -63,7 +63,7 @@ export function StudentShell() {
 
   const unreadAnnouncements = announcementsData?.unread_count ?? 0;
   const hasUnreadUrgent = (announcementsData?.announcements ?? []).some(
-    (a) => !a.is_read && a.type === 'urgent',
+    (a) => !a.is_read && a.is_urgent,
   );
 
   const lastSeen = user ? getGradesLastSeenAt(user.id) : null;

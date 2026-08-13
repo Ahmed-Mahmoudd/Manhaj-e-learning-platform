@@ -1,10 +1,11 @@
-export type AnnouncementType = 'general' | 'assignment' | 'exam' | 'urgent';
+export type AnnouncementType = 'general' | 'assignment' | 'exam';
 
 export interface AnnouncementSummary {
   id: number;
   title: string;
   body: string;
   type: AnnouncementType;
+  is_urgent: boolean;
   is_read: boolean;
   published_at: string | null;
   author: { id: number; name: string };

@@ -37,6 +37,7 @@ class StudentAnnouncementController extends Controller
                 'title'        => $a->title,
                 'body'         => $a->body,
                 'type'         => $a->type,
+                'is_urgent'    => $a->is_urgent,
                 'is_read'      => $a->getAttribute('is_read'),
                 'published_at' => $a->published_at,
                 'author' => [
