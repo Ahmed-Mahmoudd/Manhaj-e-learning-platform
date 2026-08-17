@@ -111,6 +111,9 @@ Route::prefix('v1')->group(function () {
                      // Create thread / reply
                      Route::post('sections/{section}/threads',  [DiscussionController::class, 'store']);
                      Route::post('threads/{thread}/posts',      [DiscussionController::class, 'addPost']);
+                     // Edit / delete own reply (ownership enforced in DiscussionService)
+                     Route::patch('posts/{post}',               [DiscussionController::class, 'updatePost']);
+                     Route::delete('posts/{post}',              [DiscussionController::class, 'deletePost']);
                      // Upvote (toggle)
                      Route::post('posts/{post}/vote',           [DiscussionController::class, 'vote']);
                      // Instructor-gated (assertInstructor() inside controller)

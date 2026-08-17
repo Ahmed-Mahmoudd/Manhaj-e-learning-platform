@@ -3,9 +3,11 @@ import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   addThreadPost,
+  deleteThreadPost,
   discussionKeys,
   fetchThread,
   togglePostVote,
+  updateThreadPost,
 } from '@/api/discussion';
 import { AsyncPanel } from '@/components/AsyncPanel';
 import { BackLink } from '@/components/BackLink';
@@ -16,6 +18,15 @@ import { trimRequired } from '@/utils/formText';
 import { parseRouteId } from '@/utils/routeParams';
 import type { DiscussionPost } from '@/types/discussion';
 import { threadTypeLabel } from '@/utils/threadType';
+
+/**
+ * A deleted post with no replies is hidden entirely (nothing to preserve).
+ * A deleted post that has replies is kept as a "[deleted]" placeholder so
+ * the replies underneath don't lose their parent.
+ */
+function visiblePosts(posts: DiscussionPost[]): DiscussionPost[] {
+  return posts.filter((p) => !p.is_deleted || (p.replies?.length ?? 0) > 0);
+}
 
 export function DiscussThreadPage() {
   const { sectionId, threadId } = useParams<{ sectionId: string; threadId: string }>();
@@ -99,10 +110,10 @@ export function DiscussThreadPage() {
 
             <section className="space-y-4">
               <h2 className="text-sm font-medium text-ink/70">{t('replies')}</h2>
-              {(data?.posts ?? []).length === 0 ? (
+              {visiblePosts(data?.posts ?? []).length === 0 ? (
                 <p className="text-sm text-ink/50">{t('noReplies')}</p>
               ) : (
-                (data?.posts ?? []).map((post) => (
+                visiblePosts(data?.posts ?? []).map((post) => (
                   <PostCard key={post.id} post={post} threadId={tid} locked={thread.is_locked} />
                 ))
               )}
@@ -163,6 +174,10 @@ function PostCard({
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const [voteError, setVoteError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBody, setEditBody] = useState(post.body);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const voteMutation = useMutation({
     mutationFn: () => togglePostVote(post.id),
@@ -174,6 +189,45 @@ function PostCard({
       setVoteError(apiErrorMessage(err, t('networkError'), t('serverError'), t));
     },
   });
+
+  const editMutation = useMutation({
+    mutationFn: () => {
+      const trimmed = trimRequired(editBody);
+      if (!trimmed) throw new Error(t('formRequiredFields'));
+      return updateThreadPost(post.id, trimmed);
+    },
+    onSuccess: () => {
+      setEditError(null);
+      setIsEditing(false);
+      void queryClient.invalidateQueries({ queryKey: discussionKeys.thread(threadId) });
+    },
+    onError: (err: Error) => {
+      setEditError(apiErrorMessage(err, t('networkError'), t('serverError'), t));
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteThreadPost(post.id),
+    onSuccess: () => {
+      setDeleteError(null);
+      void queryClient.invalidateQueries({ queryKey: discussionKeys.thread(threadId) });
+      void queryClient.invalidateQueries({ queryKey: discussionKeys.all });
+    },
+    onError: (err: Error) => {
+      setDeleteError(apiErrorMessage(err, t('networkError'), t('serverError'), t));
+    },
+  });
+
+  if (post.is_deleted) {
+    return (
+      <div className="border border-ink/10 bg-white px-5 py-4">
+        <p className="text-sm italic text-ink/40">{t('deletedPostBody')}</p>
+        {visiblePosts(post.replies ?? []).map((reply) => (
+          <PostCard key={reply.id} post={reply} threadId={threadId} locked={locked} />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -206,11 +260,81 @@ function PostCard({
           </div>
         )}
       </div>
-      <p className="mt-2 whitespace-pre-wrap text-sm text-ink/85">{post.body}</p>
-      {post.replies?.map((reply) => (
+
+      {isEditing ? (
+        <div className="mt-2 space-y-2">
+          <textarea
+            value={editBody}
+            onChange={(e) => setEditBody(e.target.value)}
+            rows={3}
+            className="w-full border border-ink/15 px-3 py-2 text-sm"
+          />
+          {editError && (
+            <p className="text-xs text-brick" role="alert">
+              {editError}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={editMutation.isPending}
+              onClick={() => editMutation.mutate()}
+              className="bg-brass px-3 py-1.5 text-xs text-white disabled:opacity-60"
+            >
+              {t('saveEdit')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditing(false);
+                setEditBody(post.body);
+                setEditError(null);
+              }}
+              className="px-3 py-1.5 text-xs text-ink/60"
+            >
+              {t('cancelEdit')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-2 whitespace-pre-wrap text-sm text-ink/85">
+          {post.body}
+          {post.is_edited && <span className="ms-2 text-xs text-ink/35">{t('editedLabel')}</span>}
+        </p>
+      )}
+
+      {post.is_own && !isEditing && (
+        <div className="mt-2 flex gap-3">
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="text-xs text-ink/50 underline"
+          >
+            {t('editPost')}
+          </button>
+          <button
+            type="button"
+            disabled={deleteMutation.isPending}
+            onClick={() => {
+              if (window.confirm(t('confirmDeletePost'))) {
+                deleteMutation.mutate();
+              }
+            }}
+            className="text-xs text-brick underline disabled:opacity-60"
+          >
+            {t('deletePost')}
+          </button>
+        </div>
+      )}
+      {deleteError && (
+        <p className="mt-1 text-[10px] text-brick" role="alert">
+          {deleteError}
+        </p>
+      )}
+
+      {visiblePosts(post.replies ?? []).map((reply) => (
         <div key={reply.id} className="mt-3 ms-4 border-s border-ink/15 ps-4">
-          <p className="text-xs font-medium text-ink/70">{reply.author?.name}</p>
-          <p className="mt-1 whitespace-pre-wrap text-sm text-ink/80">{reply.body}</p>
+          <PostCard post={reply} threadId={threadId} locked={locked} />
         </div>
       ))}
     </div>

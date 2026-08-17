@@ -28,6 +28,9 @@ export interface DiscussionPost {
   upvotes_count: number;
   is_instructor_answer: boolean;
   has_voted: boolean;
+  is_deleted: boolean;
+  is_edited: boolean;
+  is_own: boolean;
   created_at: string | null;
   author: ThreadAuthor | null;
   replies?: DiscussionPost[];

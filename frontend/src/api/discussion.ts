@@ -38,6 +38,19 @@ export function addThreadPost(
   });
 }
 
+export function updateThreadPost(postId: number, body: string) {
+  return apiRequest<{ post: DiscussionPost }>(`/discuss/posts/${postId}`, {
+    method: 'PATCH',
+    body: { body },
+  });
+}
+
+export function deleteThreadPost(postId: number) {
+  return apiRequest<{ message: string }>(`/discuss/posts/${postId}`, {
+    method: 'DELETE',
+  });
+}
+
 export function togglePostVote(postId: number) {
   return apiRequest<VoteResponse>(`/discuss/posts/${postId}/vote`, { method: 'POST' });
 }

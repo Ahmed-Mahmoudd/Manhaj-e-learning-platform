@@ -70,6 +70,44 @@ class DiscussionService
     }
 
     /**
+     * Edit the body of a post.
+     *
+     * @throws \RuntimeException if the user is not the author, or the post is deleted
+     */
+    public function updatePost(DiscussionPost $post, User $user, string $body): DiscussionPost
+    {
+        if ($post->author_id !== $user->id) {
+            throw new \RuntimeException('You can only edit your own posts.');
+        }
+
+        if ($post->trashed()) {
+            throw new \RuntimeException('This post has been deleted.');
+        }
+
+        $post->update(['body' => $body]);
+
+        return $post;
+    }
+
+    /**
+     * Soft-delete a post. Replies are preserved (not cascaded) since the
+     * row stays — only its content is hidden from the API response.
+     *
+     * @throws \RuntimeException if the user is not the author
+     */
+    public function deletePost(DiscussionPost $post, User $user): void
+    {
+        if ($post->author_id !== $user->id) {
+            throw new \RuntimeException('You can only delete your own posts.');
+        }
+
+        DB::transaction(function () use ($post) {
+            $post->delete();
+            $post->thread->decrement('replies_count');
+        });
+    }
+
+    /**
      * Toggle pin state on a thread.
      */
     public function togglePin(DiscussionThread $thread): DiscussionThread

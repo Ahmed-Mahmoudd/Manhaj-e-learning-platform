@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Discussion\AddPostRequest;
 use App\Http\Requests\Discussion\StoreThreadRequest;
+use App\Http\Requests\Discussion\UpdatePostRequest;
 use App\Models\DiscussionPost;
 use App\Models\DiscussionThread;
 use App\Models\Enrolment;
@@ -61,8 +62,10 @@ class DiscussionController extends Controller
 
         $thread->load(['author', 'section.course']);
 
+        // withTrashed(): a deleted post still shows (as "[deleted]") so replies under it aren't orphaned.
         $posts = $thread->topLevelPosts()
-            ->with(['author', 'replies.author'])
+            ->withTrashed()
+            ->with(['author', 'replies' => fn($q) => $q->withTrashed()->with('author')])
             ->get();
 
         $votedPostIds = \App\Models\DiscussionPostVote::where('user_id', $request->user()->id)
@@ -72,7 +75,7 @@ class DiscussionController extends Controller
 
         return response()->json([
             'thread' => $this->threadDetail($thread),
-            'posts'  => $posts->map(fn($p) => $this->postData($p, $votedPostIds)),
+            'posts'  => $posts->map(fn($p) => $this->postData($p, $votedPostIds, $request->user()->id)),
         ]);
     }
 
@@ -112,7 +115,41 @@ class DiscussionController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json(['post' => $this->postData($post->load('author'))], 201);
+        return response()->json(['post' => $this->postData($post->load('author'), null, $request->user()->id)], 201);
+    }
+
+    /**
+     * PATCH /api/v1/discuss/posts/{post}
+     * Edit your own reply.
+     */
+    public function updatePost(UpdatePostRequest $request, DiscussionPost $post): JsonResponse
+    {
+        $this->assertAccess($post->thread->section, $request->user());
+
+        try {
+            $post = $this->service->updatePost($post, $request->user(), $request->validated()['body']);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        }
+
+        return response()->json(['post' => $this->postData($post->load('author'), null, $request->user()->id)]);
+    }
+
+    /**
+     * DELETE /api/v1/discuss/posts/{post}
+     * Delete your own reply (soft delete — replies to it are preserved).
+     */
+    public function deletePost(Request $request, DiscussionPost $post): JsonResponse
+    {
+        $this->assertAccess($post->thread->section, $request->user());
+
+        try {
+            $this->service->deletePost($post, $request->user());
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        }
+
+        return response()->json(['message' => 'Post deleted.']);
     }
 
     // ─── Upvote ───────────────────────────────────────────────────────────────
@@ -225,25 +262,29 @@ class DiscussionController extends Controller
         return array_merge($this->threadSummary($t), ['body' => $t->body]);
     }
 
-    private function postData(DiscussionPost $p, $votedIds = null): array
+    private function postData(DiscussionPost $p, $votedIds = null, ?int $currentUserId = null): array
     {
-        $voted = $votedIds ? $votedIds->has($p->id) : false;
+        $voted     = $votedIds ? $votedIds->has($p->id) : false;
+        $isDeleted = $p->trashed();
 
         $data = [
             'id'                   => $p->id,
-            'body'                 => $p->body,
+            'body'                 => $isDeleted ? '[deleted]' : $p->body,
             'upvotes_count'        => $p->upvotes_count,
             'is_instructor_answer' => $p->is_instructor_answer,
             'has_voted'            => $voted,
+            'is_deleted'           => $isDeleted,
+            'is_edited'            => ! $isDeleted && $p->updated_at->gt($p->created_at),
+            'is_own'               => $currentUserId !== null && $p->author_id === $currentUserId,
             'created_at'           => $p->created_at,
-            'author' => $p->relationLoaded('author') ? [
+            'author' => (! $isDeleted && $p->relationLoaded('author')) ? [
                 'id'   => $p->author->id,
                 'name' => $p->author->name,
             ] : null,
         ];
 
         if ($p->relationLoaded('replies')) {
-            $data['replies'] = $p->replies->map(fn($r) => $this->postData($r));
+            $data['replies'] = $p->replies->map(fn($r) => $this->postData($r, null, $currentUserId));
         }
 
         return $data;
