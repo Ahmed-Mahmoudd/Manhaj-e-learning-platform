@@ -15,7 +15,7 @@ class UpdateUserRoleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'role' => ['required', 'string', 'in:' . implode(',', UserAdminController::MANAGEABLE_ROLES)],
+            'role' => ['required', 'string', 'in:' . implode(',', UserAdminController::FACULTY_MANAGEABLE_ROLES)],
         ];
     }
 }

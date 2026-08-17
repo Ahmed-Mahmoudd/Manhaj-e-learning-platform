@@ -63,6 +63,42 @@ class UniversityAdminApiTest extends TestCase
              ->getJson('/api/v1/admin/faculties')->assertForbidden();
     }
 
+    // ─── Role separation ──────────────────────────────────────────────────────
+
+    #[Test]
+    public function university_admin_cannot_access_faculty_admin_routes(): void
+    {
+        ['tenant' => $tenant, 'admin' => $admin] = $this->scaffold();
+
+        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
+             ->getJson('/api/v1/admin/departments')->assertForbidden();
+
+        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
+             ->getJson('/api/v1/admin/courses')->assertForbidden();
+
+        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
+             ->getJson('/api/v1/admin/users')->assertForbidden();
+    }
+
+    #[Test]
+    public function university_admin_dashboard_returns_university_stats(): void
+    {
+        ['tenant' => $tenant, 'admin' => $admin] = $this->scaffold();
+
+        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
+             ->getJson('/api/v1/admin/dashboard')
+             ->assertOk()
+             ->assertJsonPath('scope', 'university')
+             ->assertJsonStructure([
+                 'stats' => [
+                     'total_students',
+                     'total_faculties',
+                     'total_departments',
+                     'faculty_summaries',
+                 ],
+             ]);
+    }
+
     // ─── Faculty ──────────────────────────────────────────────────────────────
 
     #[Test]

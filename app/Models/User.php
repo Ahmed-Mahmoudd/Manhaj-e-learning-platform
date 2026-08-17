@@ -9,6 +9,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -20,6 +21,7 @@ class User extends Authenticatable implements CanResetPasswordContract
 
     protected $fillable = [
         'tenant_id',
+        'faculty_id',
         'role',
         'name',
         'email',
@@ -36,8 +38,13 @@ class User extends Authenticatable implements CanResetPasswordContract
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
-            'role'              => Role::class,  // auto-cast string → Role enum
+            'role'              => Role::class,
         ];
+    }
+
+    public function faculty(): BelongsTo
+    {
+        return $this->belongsTo(Faculty::class);
     }
 
     // ─── Role helpers ─────────────────────────────────────────────────────────

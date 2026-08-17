@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Admin\AdminDashboardController;
 use App\Http\Controllers\Api\V1\Admin\CourseAdminController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
 use App\Http\Controllers\Api\V1\Admin\FacultyController;
+use App\Http\Controllers\Api\V1\Admin\ProgrammeController;
 use App\Http\Controllers\Api\V1\Admin\SectionAdminController;
 use App\Http\Controllers\Api\V1\Admin\TermController;
 use App\Http\Controllers\Api\V1\Admin\UserAdminController;
@@ -122,21 +124,17 @@ Route::prefix('v1')->group(function () {
                      Route::post('posts/{post}/answer',         [DiscussionController::class, 'markAnswer']);
                  });
 
-            // ── University Admin ──────────────────────────────────────────────
-            Route::middleware('role:university_admin,faculty_admin')
+            // ── University Admin (institutional structure + terms) ────────────
+            Route::middleware('role:university_admin')
                  ->prefix('admin')
                  ->group(function () {
+                     Route::get('dashboard', [AdminDashboardController::class, 'index']);
+
                      Route::get('faculties',              [FacultyController::class, 'index']);
                      Route::post('faculties',             [FacultyController::class, 'store']);
                      Route::get('faculties/{faculty}',    [FacultyController::class, 'show']);
                      Route::patch('faculties/{faculty}',  [FacultyController::class, 'update']);
                      Route::delete('faculties/{faculty}', [FacultyController::class, 'destroy']);
-
-                     Route::get('departments',               [DepartmentController::class, 'index']);
-                     Route::post('departments',              [DepartmentController::class, 'store']);
-                     Route::get('departments/{department}',  [DepartmentController::class, 'show']);
-                     Route::patch('departments/{department}',[DepartmentController::class, 'update']);
-                     Route::delete('departments/{department}',[DepartmentController::class, 'destroy']);
 
                      Route::get('terms',          [TermController::class, 'index']);
                      Route::post('terms',         [TermController::class, 'store']);
@@ -144,6 +142,25 @@ Route::prefix('v1')->group(function () {
                      Route::patch('terms/{term}', [TermController::class, 'update']);
                      Route::post('terms/{term}/activate',   [TermController::class, 'activate']);
                      Route::post('terms/{term}/deactivate', [TermController::class, 'deactivate']);
+                 });
+
+            // ── Faculty Admin (faculty-scoped academic operations) ────────────
+            Route::middleware('role:faculty_admin')
+                 ->prefix('admin')
+                 ->group(function () {
+                     Route::get('dashboard', [AdminDashboardController::class, 'index']);
+
+                     Route::get('departments',                [DepartmentController::class, 'index']);
+                     Route::post('departments',               [DepartmentController::class, 'store']);
+                     Route::get('departments/{department}',   [DepartmentController::class, 'show']);
+                     Route::patch('departments/{department}', [DepartmentController::class, 'update']);
+                     Route::delete('departments/{department}',[DepartmentController::class, 'destroy']);
+
+                     Route::get('programmes',               [ProgrammeController::class, 'index']);
+                     Route::post('programmes',              [ProgrammeController::class, 'store']);
+                     Route::get('programmes/{programme}',   [ProgrammeController::class, 'show']);
+                     Route::patch('programmes/{programme}', [ProgrammeController::class, 'update']);
+                     Route::delete('programmes/{programme}',[ProgrammeController::class, 'destroy']);
 
                      Route::get('courses',            [CourseAdminController::class, 'index']);
                      Route::post('courses',           [CourseAdminController::class, 'store']);
