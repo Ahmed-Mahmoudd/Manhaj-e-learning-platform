@@ -10,7 +10,7 @@ export function AdminPanel({
     className?: string;
 }) {
     return (
-        <div className={`border border-ink/10 bg-white ${className}`}>
+        <div className={`overflow-hidden rounded-lg border border-ink/10 bg-white shadow-xs ${className}`}>
             {children}
         </div>
     );
@@ -22,7 +22,7 @@ export function AdminInput({
 }: React.InputHTMLAttributes<HTMLInputElement>) {
     return (
         <input
-            className={`border border-ink/15 px-3 py-2 text-sm ${className}`}
+            className={`rounded border border-ink/15 bg-paper/20 px-3 py-1.5 text-sm text-ink transition focus:border-brass focus:bg-white focus:outline-none focus:ring-1 focus:ring-brass ${className}`}
             {...props}
         />
     );
@@ -35,7 +35,7 @@ export function AdminSelect({
 }: React.SelectHTMLAttributes<HTMLSelectElement>) {
     return (
         <select
-            className={`border border-ink/15 px-3 py-2 text-sm ${className}`}
+            className={`rounded border border-ink/15 bg-paper/20 px-3 py-1.5 text-sm text-ink transition focus:border-brass focus:bg-white focus:outline-none focus:ring-1 focus:ring-brass ${className}`}
             {...props}
         >
             {children}
@@ -52,15 +52,15 @@ export function AdminButton({
 }) {
     const base =
         variant === "primary"
-            ? "bg-brass text-white hover:bg-brass-hover disabled:opacity-60"
+            ? "rounded bg-brass px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-brass-hover disabled:opacity-60"
             : variant === "danger"
-              ? "text-brick hover:bg-brick/5 disabled:opacity-60"
-              : "text-ink/60 hover:text-brass disabled:opacity-60";
+              ? "rounded border border-brick/20 bg-brick/5 px-3 py-1.5 text-xs font-semibold text-brick transition hover:bg-brick hover:text-white disabled:opacity-60"
+              : "rounded border border-ink/15 px-3 py-1.5 text-xs font-medium text-ink/70 transition hover:bg-paper hover:text-ink disabled:opacity-60";
 
     return (
         <button
             type="button"
-            className={`px-3 py-1.5 text-sm transition ${base} ${className}`}
+            className={`inline-flex items-center justify-center gap-1.5 ${base} ${className}`}
             {...props}
         />
     );
@@ -116,7 +116,7 @@ export function AdminTable({
                 </colgroup>
 
                 <thead>
-                    <tr className="border-b border-ink/10 text-xs uppercase text-ink/45">
+                    <tr className="border-b border-ink/10 bg-paper text-xs uppercase tracking-wider text-ink/50">
                         {headers.map((h, i) => (
                             <th
                                 key={i}

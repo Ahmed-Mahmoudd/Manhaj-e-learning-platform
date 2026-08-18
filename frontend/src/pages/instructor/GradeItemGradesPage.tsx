@@ -113,7 +113,7 @@ export function GradeItemGradesPage() {
   if (sid === null || iid === null) return <InstructorInvalidSection />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <BackLink to={`/instructor/sections/${sid}/grades`}>{t('backToGradeItems')}</BackLink>
 
       <AsyncPanel
@@ -123,71 +123,83 @@ export function GradeItemGradesPage() {
         emptyMessage={t('gradeItemNotFound')}
       >
         {gradeItem && (
-          <>
-            <header className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h1 className="text-xl font-semibold text-ink">{gradeItem.name}</h1>
-                <p className="mt-1 text-sm text-ink/60">
-                  {t('maxScore', { score: gradeItem.max_score })}
+          <div className="space-y-6">
+            <header className="flex flex-col gap-4 rounded-lg border border-ink/10 bg-white p-6 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1 className="text-xl font-semibold text-ink">{gradeItem.name}</h1>
+                  {isPublished ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      {t('published')}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600">
+                      <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
+                      {t('draft')}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-ink/60">
+                  {t('maxScore', { score: gradeItem.max_score })} • {rows.filter((r) => r.saved).length} / {rows.length} {t('gradesEntered', { count: rows.length })}
                 </p>
               </div>
+
               {!isPublished && canPublish && (
-                <button
-                  type="button"
-                  disabled={publishMutation.isPending || rows.every((r) => !r.saved)}
-                  onClick={() => publishMutation.mutate()}
-                  className="bg-brass px-4 py-2 text-sm text-white disabled:opacity-50"
-                >
-                  {publishMutation.isPending ? t('processing') : t('publishGrades')}
-                </button>
-              )}
-              {isPublished && (
-                <span className="text-sm font-medium text-green-700">{t('published')}</span>
+                <div className="flex flex-col items-start sm:items-end gap-1">
+                  <button
+                    type="button"
+                    disabled={publishMutation.isPending || rows.every((r) => !r.saved)}
+                    onClick={() => publishMutation.mutate()}
+                    className="inline-flex items-center gap-2 rounded bg-brass px-4 py-2 text-sm font-medium text-white shadow-xs transition hover:bg-brass-hover disabled:opacity-50"
+                  >
+                    {publishMutation.isPending ? t('processing') : t('publishGrades')}
+                  </button>
+                  <span className="text-xs text-ink/40">{t('publishGradesHint')}</span>
+                </div>
               )}
             </header>
 
             {publishError && (
-              <p className="text-sm text-brick" role="alert">
+              <div className="rounded border border-brick/30 bg-brick/5 p-4 text-xs text-brick" role="alert">
                 {publishError}
-              </p>
+              </div>
             )}
 
-            {!isPublished && canPublish && (
-              <p className="text-xs text-ink/50">{t('publishGradesHint')}</p>
-            )}
-
-            <div className="overflow-x-auto border border-ink/10 bg-white">
-              <table className="w-full min-w-[36rem] text-sm">
-                <thead>
-                  <tr className="border-b border-ink/10 text-start text-xs uppercase text-ink/45">
-                    <th className="px-4 py-3 font-medium">{t('studentName')}</th>
-                    <th className="px-4 py-3 font-medium">{t('score')}</th>
-                    <th className="px-4 py-3 font-medium">{t('letterGrade')}</th>
-                    <th className="px-4 py-3 font-medium">{t('feedback')}</th>
-                    <th className="px-4 py-3 font-medium" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-ink/10">
-                  {rows.map((row) => (
-                    <GradeEntryRow
-                      key={row.studentId}
-                      row={row}
-                      itemId={iid}
-                      sectionId={sid}
-                      maxScore={gradeItem.max_score}
-                      onUpdate={(patch) =>
-                        setRows((prev) =>
-                          prev.map((r) =>
-                            r.studentId === row.studentId ? { ...r, ...patch } : r,
-                          ),
-                        )
-                      }
-                    />
-                  ))}
-                </tbody>
-              </table>
+            <div className="overflow-hidden rounded-lg border border-ink/10 bg-white shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[36rem] text-sm">
+                  <thead>
+                    <tr className="border-b border-ink/10 bg-paper text-start text-xs uppercase tracking-wider text-ink/50">
+                      <th className="px-5 py-3 font-medium">{t('studentName')}</th>
+                      <th className="px-4 py-3 font-medium">{t('score')}</th>
+                      <th className="px-4 py-3 font-medium text-center">{t('letterGrade')}</th>
+                      <th className="px-4 py-3 font-medium">{t('feedback')}</th>
+                      <th className="px-5 py-3 font-medium text-end" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-ink/10">
+                    {rows.map((row) => (
+                      <GradeEntryRow
+                        key={row.studentId}
+                        row={row}
+                        itemId={iid}
+                        sectionId={sid}
+                        maxScore={gradeItem.max_score}
+                        onUpdate={(patch) =>
+                          setRows((prev) =>
+                            prev.map((r) =>
+                              r.studentId === row.studentId ? { ...r, ...patch } : r,
+                            ),
+                          )
+                        }
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </>
+          </div>
         )}
       </AsyncPanel>
     </div>
@@ -234,35 +246,55 @@ function GradeEntryRow({
   });
 
   return (
-    <tr>
-      <td className="px-4 py-3 font-medium text-ink">{row.name}</td>
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          min={0}
-          max={maxScore}
-          step="0.5"
-          value={row.score}
-          onChange={(e) => onUpdate({ score: e.target.value, saved: false })}
-          className="w-24 border border-ink/15 px-2 py-1 font-mono text-sm"
-        />
-        <span className="ms-1 text-xs text-ink/40">/ {maxScore}</span>
+    <tr className="hover:bg-paper/30 transition-colors">
+      <td className="px-5 py-3.5 font-medium text-ink">
+        <div className="flex items-center gap-2">
+          <span>{row.name}</span>
+          {row.saved && (
+            <span className="text-xs text-emerald-600 font-normal" title={t('saved')}>
+              ✓
+            </span>
+          )}
+        </div>
       </td>
-      <td className="px-4 py-3 font-mono text-ink">{row.letter ?? '—'}</td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3.5">
+        <div className="inline-flex items-center gap-1.5">
+          <input
+            type="number"
+            min={0}
+            max={maxScore}
+            step="0.5"
+            value={row.score}
+            onChange={(e) => onUpdate({ score: e.target.value, saved: false })}
+            className="w-20 rounded border border-ink/15 bg-paper/20 px-2.5 py-1.5 font-mono text-sm transition focus:border-brass focus:bg-white focus:outline-none focus:ring-1 focus:ring-brass"
+          />
+          <span className="text-xs font-mono text-ink/40">/ {maxScore}</span>
+        </div>
+      </td>
+      <td className="px-4 py-3.5 text-center font-mono text-xs font-bold text-ink">
+        {row.letter ? (
+          <span className="inline-block rounded bg-paper px-2 py-0.5 text-ink">
+            {row.letter}
+          </span>
+        ) : (
+          <span className="text-ink/30">—</span>
+        )}
+      </td>
+      <td className="px-4 py-3.5">
         <input
           type="text"
           value={row.feedback}
+          placeholder={t('feedback')}
           onChange={(e) => onUpdate({ feedback: e.target.value, saved: false })}
-          className="w-full min-w-[8rem] border border-ink/15 px-2 py-1 text-sm"
+          className="w-full min-w-[8rem] rounded border border-ink/15 bg-paper/20 px-3 py-1.5 text-xs text-ink transition focus:border-brass focus:bg-white focus:outline-none focus:ring-1 focus:ring-brass"
         />
       </td>
-      <td className="px-4 py-3 text-end">
+      <td className="px-5 py-3.5 text-end">
         <button
           type="button"
           disabled={saveMutation.isPending || row.score === ''}
           onClick={() => saveMutation.mutate()}
-          className="text-xs text-brass underline disabled:opacity-50"
+          className="rounded border border-brass/20 bg-brass/10 px-3 py-1 text-xs font-medium text-brass transition hover:bg-brass hover:text-white disabled:opacity-40"
         >
           {saveMutation.isPending ? t('saving') : t('saveGrade')}
         </button>

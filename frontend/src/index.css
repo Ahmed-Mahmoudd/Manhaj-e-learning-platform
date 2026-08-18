@@ -7,13 +7,14 @@
   --color-brass-hover: #9a7030;
   --color-sage: #5b8a72;
   --color-brick: #b4543a;
-  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-sans-ar: "IBM Plex Sans Arabic", "IBM Plex Sans", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 html {
   background-color: var(--color-paper);
+  color-scheme: light;
 }
 
 body {
@@ -21,7 +22,9 @@ body {
   min-height: 100vh;
   color: var(--color-ink);
   font-family: var(--font-sans);
+  background-color: var(--color-paper);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html[dir="rtl"] body {
@@ -32,10 +35,24 @@ html[dir="rtl"] body {
   font-family: var(--font-mono);
 }
 
+/* Card & Surface Polish */
+.card-surface {
+  background-color: #ffffff;
+  border: 1px solid rgba(22, 35, 63, 0.08);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(22, 35, 63, 0.04);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-surface:hover {
+  border-color: rgba(184, 134, 59, 0.35);
+  box-shadow: 0 4px 12px -2px rgba(22, 35, 63, 0.06), 0 2px 4px -2px rgba(22, 35, 63, 0.04);
+}
+
 @keyframes fade-rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -44,5 +61,6 @@ html[dir="rtl"] body {
 }
 
 .animate-fade-rise {
-  animation: fade-rise 0.45s ease-out both;
+  animation: fade-rise 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+

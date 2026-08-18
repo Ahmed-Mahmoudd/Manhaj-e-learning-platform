@@ -3,10 +3,10 @@ import type { ReactNode } from 'react';
 type StatChipVariant = 'neutral' | 'brass' | 'sage' | 'brick';
 
 const VARIANT_CLASS: Record<StatChipVariant, string> = {
-  neutral: 'bg-ink/5 text-ink/60',
-  brass: 'bg-brass/10 text-brass',
-  sage: 'bg-sage/10 text-sage',
-  brick: 'bg-brick/10 text-brick',
+  neutral: 'bg-paper text-ink/70 border border-ink/10',
+  brass: 'bg-brass/10 text-brass border border-brass/20',
+  sage: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  brick: 'bg-brick/10 text-brick border border-brick/20',
 };
 
 export function StatChip({
@@ -18,7 +18,7 @@ export function StatChip({
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${VARIANT_CLASS[variant]}`}
+      className={`inline-flex items-center gap-1 rounded-md px-2.5 py-0.5 text-xs font-medium ${VARIANT_CLASS[variant]}`}
     >
       {children}
     </span>

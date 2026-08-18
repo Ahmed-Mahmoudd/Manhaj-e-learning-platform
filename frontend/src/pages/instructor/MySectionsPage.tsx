@@ -57,17 +57,17 @@ export function MySectionsPage() {
         isEmpty={!isLoading && !error && sections.length === 0}
         emptyMessage={t('noInstructorSections')}
       >
-        <ul className="divide-y divide-ink/10 border border-ink/10 bg-white">
+        <div className="space-y-4">
           {sections.map((section) => (
-            <SectionRow key={section.id} section={section} locale={locale} />
+            <SectionCard key={section.id} section={section} locale={locale} />
           ))}
-        </ul>
+        </div>
       </AsyncPanel>
     </div>
   );
 }
 
-function SectionRow({
+function SectionCard({
   section,
   locale,
 }: {
@@ -98,15 +98,19 @@ function SectionRow({
   const threadCount = threadsQuery.isLoading ? null : (threadsQuery.data?.meta.total ?? 0);
 
   return (
-    <li className="px-5 py-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="font-mono text-sm font-medium text-ink">{section.course.code}</span>
-            <span className="text-xs text-ink/40">§{section.section_number}</span>
+    <div className="rounded-xl border border-ink/10 bg-white p-6 shadow-xs transition-all hover:border-brass/40 hover:shadow-sm space-y-4">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-sm font-bold text-ink">{section.course.code}</span>
+            <span className="rounded bg-paper px-2 py-0.5 font-mono text-xs text-ink/50">
+              §{section.section_number}
+            </span>
           </div>
-          <h2 className="mt-1 text-base font-medium text-ink">{title}</h2>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+
+          <h2 className="text-lg font-semibold text-ink">{title}</h2>
+
+          <div className="flex flex-wrap gap-2 pt-1">
             <StatChip variant="sage">
               {t('sectionStatEnrolled', { count: section.enrolled_count })}
             </StatChip>
@@ -122,13 +126,18 @@ function SectionRow({
               </StatChip>
             )}
           </div>
+
           {scheduleText && (
-            <p className="mt-2 font-mono text-xs text-ink/45">{scheduleText}</p>
+            <p className="font-mono text-xs text-ink/50 pt-1">🗓️ {scheduleText}</p>
           )}
         </div>
-        <SectionActionLinks sectionId={section.id} />
+
+        <div className="shrink-0 pt-1">
+          <SectionActionLinks sectionId={section.id} />
+        </div>
       </div>
-      <div className="mt-3">
+
+      <div className="pt-2 border-t border-ink/5">
         <TermLedger
           variant="inline"
           startsAt={section.term.starts_at}
@@ -136,6 +145,6 @@ function SectionRow({
           label={section.term.name}
         />
       </div>
-    </li>
+    </div>
   );
 }
