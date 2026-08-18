@@ -2,7 +2,7 @@
 
 @theme {
   --color-ink: #0f172a;
-  --color-paper: #f8fafc;
+  --color-paper: #f1f5f9;
   --color-brass: #d97706;
   --color-brass-hover: #b45309;
   --color-sage: #10b981;
@@ -13,7 +13,7 @@
 }
 
 html {
-  background-color: #f8fafc;
+  background-color: #f1f5f9;
   color-scheme: light;
 }
 
@@ -22,9 +22,12 @@ body {
   min-height: 100vh;
   color: #0f172a;
   font-family: var(--font-sans);
-  background: radial-gradient(circle at 50% 0%, rgba(217, 119, 6, 0.04) 0%, transparent 60%),
-              radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
-              #f8fafc;
+  background-color: #f1f5f9;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(217, 119, 6, 0.06) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -39,11 +42,11 @@ html[dir="rtl"] body {
 
 /* Glassmorphism & Modern Card Surfaces */
 .glass-card {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.95);
   border-radius: 1rem;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.03), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

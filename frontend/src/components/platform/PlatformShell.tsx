@@ -9,7 +9,7 @@ export function PlatformShell() {
   const { t } = useLocale();
 
   return (
-    <div className="min-h-screen bg-paper animate-fade-rise flex flex-col">
+    <div className="min-h-screen animate-fade-rise flex flex-col">
       <header className="bg-ink text-white shadow-sm border-b border-ink/40">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
           <div className="flex items-center gap-3">

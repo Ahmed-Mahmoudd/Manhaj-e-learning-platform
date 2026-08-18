@@ -31,8 +31,8 @@ export function GradesPage() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-2xl font-semibold text-ink">{t('myGrades')}</h1>
-        <p className="mt-1 text-sm text-ink/60">{t('myGradesSubtitle')}</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t('myGrades')}</h1>
+        <p className="mt-1 text-sm text-slate-500">{t('myGradesSubtitle')}</p>
       </header>
 
       <AsyncPanel
@@ -64,34 +64,38 @@ function SectionGradesCard({
   const lastSeen = seenStamp;
 
   return (
-    <li className="border border-ink/10 bg-white">
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-ink/10 px-5 py-4">
+    <li className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm transition-all hover:border-amber-500/30">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/50 px-6 py-5">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="font-mono text-sm font-medium text-ink">{course.code}</span>
-            <span className="text-xs text-ink/40">§{section.section_number}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/60 shadow-xs">
+              {course.code}
+            </span>
+            <span className="font-mono text-xs font-semibold rounded bg-slate-100 px-2 py-0.5 text-slate-600">
+              §{section.section_number}
+            </span>
           </div>
-          <h2 className="mt-1 text-base font-medium text-ink">{courseTitle(course, locale)}</h2>
-          <p className="mt-1 text-xs text-ink/50">{section.term.name}</p>
+          <h2 className="mt-2 text-lg font-bold text-slate-900">{courseTitle(course, locale)}</h2>
+          <p className="mt-0.5 text-xs text-slate-400">🗓️ {section.term.name}</p>
         </div>
         <OverallGrade overall={overall} />
       </header>
 
       {items.length === 0 ? (
-        <p className="px-5 py-4 text-sm text-ink/50">{t('noGradesForSection')}</p>
+        <p className="px-6 py-6 text-sm text-slate-400 text-center">{t('noGradesForSection')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[520px] text-start text-sm">
             <thead>
-              <tr className="border-b border-ink/10 text-xs uppercase tracking-wide text-ink/45">
-                <th className="px-5 py-3 font-medium">{t('gradeItem')}</th>
-                <th className="px-3 py-3 font-medium">{t('gradeType')}</th>
-                <th className="px-3 py-3 font-medium text-end">{t('score')}</th>
-                <th className="px-3 py-3 font-medium text-end">{t('letterGrade')}</th>
-                <th className="px-5 py-3 font-medium text-end">{t('weight')}</th>
+              <tr className="border-b border-slate-100 bg-slate-50/40 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <th className="px-6 py-3.5 text-start">{t('gradeItem')}</th>
+                <th className="px-4 py-3.5 text-start">{t('gradeType')}</th>
+                <th className="px-4 py-3.5 text-end">{t('score')}</th>
+                <th className="px-4 py-3.5 text-end">{t('letterGrade')}</th>
+                <th className="px-6 py-3.5 text-end">{t('weight')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-ink/8">
+            <tbody className="divide-y divide-slate-100">
               {items.map((item) => (
                 <GradeRow key={item.grade_item.id} item={item} lastSeenAt={lastSeen} />
               ))}
@@ -109,19 +113,19 @@ function OverallGrade({ overall }: { overall: SectionGrades['overall'] }) {
   if (overall.percentage == null || overall.letter == null) {
     return (
       <div className="text-end">
-        <p className="text-xs uppercase tracking-wide text-ink/45">{t('overallGrade')}</p>
-        <p className="mt-1 font-mono text-lg text-ink/30">—</p>
+        <p className="text-xs uppercase font-bold tracking-wider text-slate-400">{t('overallGrade')}</p>
+        <p className="mt-1 font-mono text-xl font-bold text-slate-300">—</p>
       </div>
     );
   }
 
   return (
-    <div className="text-end">
-      <p className="text-xs uppercase tracking-wide text-ink/45">{t('overallGrade')}</p>
-      <div className="mt-1 flex flex-col items-end gap-1">
-        <LetterGradeChip letter={overall.letter} size="lg" />
-        <p className="text-xs text-ink/55">{overall.percentage.toFixed(1)}%</p>
+    <div className="flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-50/50 px-4 py-2.5 shadow-xs">
+      <div className="text-end">
+        <p className="text-[11px] uppercase font-bold tracking-wider text-amber-800">{t('overallGrade')}</p>
+        <p className="font-mono text-sm font-bold text-slate-800">{overall.percentage.toFixed(1)}%</p>
       </div>
+      <LetterGradeChip letter={overall.letter} size="lg" />
     </div>
   );
 }
@@ -142,30 +146,34 @@ function GradeRow({
 
   return (
     <Fragment>
-      <tr className={isNew ? 'bg-brass/5' : undefined}>
-        <td className="px-5 py-3 font-medium text-ink">
+      <tr className={`hover:bg-slate-50/60 transition-colors ${isNew ? 'bg-amber-50/30' : ''}`}>
+        <td className="px-6 py-4 font-semibold text-slate-900">
           <span className="inline-flex items-center gap-2">
             {grade_item.name}
             {isNew && (
-              <span className="rounded bg-brass/15 px-1.5 py-0.5 text-[10px] font-medium uppercase text-brass">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">
                 {t('newGrade')}
               </span>
             )}
           </span>
         </td>
-        <td className="px-3 py-3 text-ink/60">{t(gradeTypeLabel(grade_item.type))}</td>
-        <td className="px-3 py-3 text-end font-mono text-ink">
-          {formatScore(score)} / {formatScore(grade_item.max_score)}
+        <td className="px-4 py-4">
+          <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+            {t(gradeTypeLabel(grade_item.type))}
+          </span>
         </td>
-        <td className="px-3 py-3 text-end">
+        <td className="px-4 py-4 text-end font-mono font-bold text-slate-900">
+          {formatScore(score)} <span className="text-slate-400 font-normal">/ {formatScore(grade_item.max_score)}</span>
+        </td>
+        <td className="px-4 py-4 text-end">
           <LetterGradeChip letter={letter} size="sm" />
         </td>
-        <td className="px-5 py-3 text-end text-ink/60">{weightLabel}</td>
+        <td className="px-6 py-4 text-end font-mono text-xs font-medium text-slate-500">{weightLabel}</td>
       </tr>
       {feedback ? (
-        <tr className="bg-paper/60">
-          <td colSpan={5} className="px-5 pb-3 pt-0 text-xs text-ink/55">
-            <span className="font-medium text-ink/65">{t('feedback')}:</span> {feedback}
+        <tr className="bg-slate-50/80">
+          <td colSpan={5} className="px-6 pb-3 pt-1 text-xs text-slate-600">
+            💬 <span className="font-semibold text-slate-700">{t('feedback')}:</span> {feedback}
           </td>
         </tr>
       ) : null}
