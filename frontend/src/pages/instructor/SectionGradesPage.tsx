@@ -125,21 +125,21 @@ export function SectionGradesPage() {
 }
 
 function GradeItemCard({ sectionId, item }: { sectionId: number; item: InstructorGradeItem }) {
-  const { t } = useLocale();
+  const { t, dir } = useLocale();
   const weightLabel = item.weight != null ? `${item.weight}%` : '—';
 
   return (
-    <div className="group rounded-lg border border-ink/10 bg-white p-5 shadow-xs transition-all hover:border-brass/40 hover:shadow-sm">
+    <div className="group rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs transition-all hover:border-amber-500/40 hover:shadow-sm">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         {/* Left Info */}
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h2 className="text-base font-semibold text-ink group-hover:text-brass-hover transition-colors">
+            <h2 className="text-base font-semibold text-slate-900 group-hover:text-amber-600 transition-colors">
               {item.name}
             </h2>
 
             {/* Type badge */}
-            <span className="inline-flex items-center rounded border border-ink/10 bg-paper px-2 py-0.5 text-xs font-medium text-ink/70">
+            <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-700">
               {t(gradeTypeLabel(item.type))}
             </span>
 
@@ -150,27 +150,25 @@ function GradeItemCard({ sectionId, item }: { sectionId: number; item: Instructo
                 {t('published')}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600">
-                <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
                 {t('draft')}
               </span>
             )}
           </div>
 
-          {/* Grouped Metadata */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink/60">
-            <span className="inline-flex items-center gap-1">
-              <span className="text-ink/40">{t('maxScoreLabel')}:</span>
-              <span className="font-mono font-medium text-ink/80">{item.max_score}</span>
+          {/* Metadata chips */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-medium">
+            <span>
+              {t('maxScoreLabel')}: <strong className="text-slate-900">{item.max_score}</strong>
             </span>
-            <span className="text-ink/20">•</span>
-            <span className="inline-flex items-center gap-1">
-              <span className="text-ink/40">{t('weight')}:</span>
-              <span className="font-mono font-medium text-ink/80">{weightLabel}</span>
+            <span>•</span>
+            <span>
+              {t('weight')}: <strong className="text-slate-900">{weightLabel}</strong>
             </span>
-            <span className="text-ink/20">•</span>
-            <span className="inline-flex items-center gap-1">
-              <span className="text-ink/40">{t('gradesEntered', { count: item.grades_count })}</span>
+            <span>•</span>
+            <span>
+              <strong className="text-slate-900 font-mono">{t('gradesEntered', { count: item.grades_count })}</strong>
             </span>
           </div>
         </div>
@@ -179,9 +177,12 @@ function GradeItemCard({ sectionId, item }: { sectionId: number; item: Instructo
         <div className="flex shrink-0 items-center justify-end pt-2 sm:pt-0">
           <Link
             to={`/instructor/sections/${sectionId}/grades/${item.id}`}
-            className="inline-flex items-center gap-1.5 rounded-md bg-brass/10 px-3.5 py-2 text-xs font-semibold text-brass transition hover:bg-brass hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-500 hover:text-white"
           >
-            {t('enterGrades')} →
+            <span>{t('enterGrades')}</span>
+            <span className="inline-block transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5">
+              {dir === 'rtl' ? '←' : '→'}
+            </span>
           </Link>
         </div>
       </div>

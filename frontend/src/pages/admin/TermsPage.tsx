@@ -27,7 +27,8 @@ function formatTermDateRange(startsAt: string, endsAt: string, locale: 'en' | 'a
     if (isNaN(s.getTime()) || isNaN(e.getTime())) return `${startsAt} – ${endsAt}`;
     const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
     const loc = locale === 'ar' ? 'ar-EG' : 'en-US';
-    return `${s.toLocaleDateString(loc, opts)} → ${e.toLocaleDateString(loc, opts)}`;
+    const arrow = locale === 'ar' ? '←' : '→';
+    return `${s.toLocaleDateString(loc, opts)} ${arrow} ${e.toLocaleDateString(loc, opts)}`;
   } catch {
     return `${startsAt} – ${endsAt}`;
   }

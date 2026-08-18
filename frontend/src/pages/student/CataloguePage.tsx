@@ -90,8 +90,11 @@ export function CataloguePage() {
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   {course.active_sections ?? 0} {t('activeSections')}
                 </span>
-                <span className="font-semibold text-amber-600 group-hover:translate-x-1 transition-transform">
-                  {locale === 'ar' ? 'عرض المقرر' : 'View course'} →
+                <span className="inline-flex items-center gap-1.5 font-semibold text-amber-600">
+                  <span>{locale === 'ar' ? 'عرض المقرر' : 'View course'}</span>
+                  <span className="inline-block transition-transform group-hover:translate-x-1 rtl:group-hover:-translate-x-1">
+                    {locale === 'ar' ? '←' : '→'}
+                  </span>
                 </span>
               </div>
             </Link>

@@ -20,7 +20,7 @@ function courseTitle(course: EnrolledCourse['course'], locale: 'en' | 'ar'): str
 }
 
 export function MyCoursesPage() {
-  const { t, locale } = useLocale();
+  const { t, locale, dir } = useLocale();
   const { data, isLoading, error } = useQuery({
     queryKey: studentKeys.courses(),
     queryFn: fetchMyCourses,
@@ -91,9 +91,10 @@ export function MyCoursesPage() {
 
             <Link
               to={`/student/sections/${continueItem.section_id}/lessons/${continueItem.lesson_id}`}
-              className="inline-flex items-center gap-2 rounded-lg bg-brass px-5 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-brass-hover"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-500/20 transition hover:from-amber-600 hover:to-amber-700 active:scale-[0.98]"
             >
-              {t('resumeLesson')} →
+              <span>{t('resumeLesson')}</span>
+              <span>{dir === 'rtl' ? '←' : '→'}</span>
             </Link>
           </div>
         </div>
@@ -155,7 +156,7 @@ function RecommendationCard({
   rec: RecommendationItem;
   locale: 'en' | 'ar';
 }) {
-  const { t } = useLocale();
+  const { t, dir } = useLocale();
   const course = rec.course;
   const title = locale === 'ar' && course.title_ar ? course.title_ar : course.title_en;
   const dept =
@@ -184,12 +185,13 @@ function RecommendationCard({
         )}
       </div>
 
-      <div className="mt-4 pt-3 border-t border-ink/10">
+      <div className="mt-4 pt-3 border-t border-slate-100">
         <Link
           to={`/student/catalogue/${course.id}`}
-          className="text-xs font-semibold text-brass hover:text-brass-hover inline-flex items-center gap-1"
+          className="text-xs font-semibold text-amber-600 hover:text-amber-700 inline-flex items-center gap-1.5"
         >
-          {t('viewInCatalogue')} →
+          <span>{t('viewInCatalogue')}</span>
+          <span>{dir === 'rtl' ? '←' : '→'}</span>
         </Link>
       </div>
     </div>
@@ -203,7 +205,7 @@ function CourseCard({
   item: EnrolledCourse;
   locale: 'en' | 'ar';
 }) {
-  const { t } = useLocale();
+  const { t, dir } = useLocale();
   const queryClient = useQueryClient();
   const { section, course, status, waitlist_position, completion_pct, enrolment_id } = item;
   const title = courseTitle(course, locale);
@@ -226,7 +228,7 @@ function CourseCard({
         e.preventDefault();
         dropMutation.mutate();
       }}
-      className="text-xs text-brick hover:underline disabled:opacity-50"
+      className="text-xs text-rose-600 hover:underline disabled:opacity-50 cursor-pointer"
     >
       {dropMutation.isPending
         ? t('processing')
@@ -237,25 +239,28 @@ function CourseCard({
   );
 
   return (
-    <div className="rounded-xl border border-ink/10 bg-white p-6 shadow-xs transition-all hover:border-brass/30 hover:shadow-sm">
+    <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs transition-all hover:border-amber-500/40 hover:shadow-md">
       {canEnter ? (
         <Link to={`/student/sections/${section.id}`} className="group block space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-sm font-bold text-ink">{course.code}</span>
-                <span className="rounded bg-paper px-2 py-0.5 font-mono text-xs text-ink/50">
+                <span className="font-mono text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200/60 shadow-xs">
+                  {course.code}
+                </span>
+                <span className="rounded-lg bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-500">
                   §{section.section_number}
                 </span>
               </div>
-              <h2 className="text-base font-semibold text-ink group-hover:text-brass transition-colors">
+              <h2 className="text-base font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
                 {title}
               </h2>
-              <p className="text-xs text-ink/60">{section.instructor.name}</p>
+              <p className="text-xs text-slate-400">👤 {section.instructor.name}</p>
             </div>
 
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-brass">
-              {t('enterGrades')} →
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600">
+              <span>{locale === 'ar' ? 'عرض المقرر' : 'View course'}</span>
+              <span>{dir === 'rtl' ? '←' : '→'}</span>
             </span>
           </div>
 

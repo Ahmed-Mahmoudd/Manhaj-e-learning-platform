@@ -1,16 +1,14 @@
 # Progress: Role Separation, I18n & Feature Modules
 
 ## Current Status
-**Fully Implemented, Modern UI Overhaul Complete & Pushed to GitHub**
-- Modern typography upgrade (**Plus Jakarta Sans**, **Outfit**, **Alexandria**, **Cairo**) loaded and applied across English & Arabic.
-- Soft ambient radial background and glassmorphic rounded cards (`rounded-2xl`, subtle borders & shadows).
-- Formatted human-readable date ranges across all admin and instructor tables (e.g. `Sep 15, 2025 → Jan 31, 2026`).
-- Vibrant StatCards with colorful icon badges and gradient indicators.
-- High-end glowing status pills with active pulse animations.
+**Fully Implemented, Visual Canvas & Full-Stack Polish Complete & Pushed to GitHub**
+- Cohesive tinted light ambient background canvas (`#f1f5f9` with warm amber and subtle indigo radial mesh glow) applied globally.
+- Shell components updated to let the ambient background breathe naturally.
+- Auth layout, Student Catalogue, Student Grades, and Student Announcements modernized with `rounded-2xl` glass card surfaces, code pills, and alert badges.
 - All **242 PHPUnit backend tests** pass 100% (655 assertions).
 - All **5 Vitest frontend unit tests** pass 100%.
-- Production bundle build (`tsc -b && vite build`) compiles in 2.03s with **0 errors**.
-- Remote repository updated: commit `b1cc576` pushed to `origin/master`.
+- Production bundle build (`tsc -b && vite build`) compiles in 2.08s with **0 errors**.
+- Remote repository updated: commit `a8106cb` pushed to `origin/master`.
 
 ---
 
@@ -46,32 +44,28 @@
 
 ---
 
-## 2. Modern UI & Visual Polish Upgrade
+## 2. Canvas Background & Page Enhancements
 
 ### Files Changed:
-1. `frontend/index.html` & `frontend/src/index.css`:
-   - Imported **Plus Jakarta Sans**, **Outfit**, **Alexandria**, and **Cairo**.
-   - Added subtle ambient radial gradients to body background.
-   - Added glassmorphic `.glass-card` and button glow classes.
-2. `frontend/src/pages/admin/TermsPage.tsx`:
-   - Replaced raw ISO dates with formatted date ranges (`Sep 15, 2025 → Jan 31, 2026`).
-   - Added glowing active status pill with animated pulse dot.
-   - Styled term type pills with icon indicators.
-3. `frontend/src/pages/admin/AdminDashboardPage.tsx`:
-   - Upgraded StatCards with colorful icon badges (`👥`, `🏛️`, `📂`, `📜`, `📚`, `📝`, `⚡`).
-   - Added active term gradient banner with pulse indicator.
-   - Refined department analytics table and grade analytics cards.
-4. `frontend/src/pages/admin/FacultiesPage.tsx`, `DepartmentsPage.tsx`, `CoursesPage.tsx`, `SectionsPage.tsx`, `UsersPage.tsx`, `ProgrammesPage.tsx`:
-   - Upgraded all CRUD tables with rounded 2xl glass panels, code badges, pill tags, and floating styled creation forms.
-5. `frontend/src/components/admin/AdminUi.tsx`:
-   - Upgraded `AdminButton` (gradient amber CTA), `AdminInput`, `AdminSelect`, `AdminTable`, and `AdminPanel`.
+1. `frontend/src/index.css`:
+   - Configured global tinted ambient canvas background (`#f1f5f9` with warm amber and soft indigo radial mesh gradients).
+2. `frontend/src/components/StudentShell.tsx`, `InstructorShell.tsx`, `AdminShell.tsx`, `AppShell.tsx`, `PlatformShell.tsx`:
+   - Removed flat opaque background overrides so the ambient canvas gradient displays seamlessly across all views.
+3. `frontend/src/components/auth/AuthLayout.tsx` & `AuthField.tsx`:
+   - Added centered brand emblem `[M] MANHAJ`, rounded-2xl glass login card, focus rings, and gradient amber submit CTA button.
+4. `frontend/src/pages/student/CataloguePage.tsx`:
+   - Upgraded course search bar and converted raw list into interactive card grid with code badges and active section chips.
+5. `frontend/src/pages/student/GradesPage.tsx`:
+   - Upgraded grade blocks into rounded-2xl cards with overall grade pill badges and clean breakdown tables.
+6. `frontend/src/pages/student/AnnouncementsPage.tsx`:
+   - Upgraded announcement list into card surfaces with pulse unread dots and urgent indicator badges.
 
 ---
 
 ## 3. Test Execution Log
 * **PHPUnit Feature & Unit Tests**: `php artisan test` — **242 passed (655 assertions) (100%)**
 * **Vitest Unit Tests**: `npx vitest run --pool=threads` — **5 passed (100%)**
-* **Frontend Build**: `npm run build` — **Vite + TypeScript build succeeded with 0 errors (2.03s)**
+* **Frontend Build**: `npm run build` — **Vite + TypeScript build succeeded with 0 errors (2.08s)**
 
 ---
 
