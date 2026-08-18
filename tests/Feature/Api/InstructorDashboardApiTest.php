@@ -144,7 +144,24 @@ class InstructorDashboardApiTest extends TestCase
     }
 
     #[Test]
-    public function ta_can_view_their_assigned_section_enrolments(): void
+    public function ta_can_get_their_assigned_sections(): void
+    {
+        ['tenant' => $tenant, 'section' => $section] =
+            $this->buildTenantWithInstructorAndSection();
+
+        $ta = User::factory()->forTenant($tenant)->teachingAssistant()->create();
+        $section->teachingAssistants()->attach($ta->id);
+
+        $this->actingAs($ta, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->getJson('/api/v1/instructor/sections')
+             ->assertOk()
+             ->assertJsonCount(1, 'sections')
+             ->assertJsonPath('sections.0.id', $section->id);
+    }
+
+    #[Test]
+    public function ta_can_view_assigned_section_enrolments(): void
     {
         ['tenant' => $tenant, 'section' => $section] =
             $this->buildTenantWithInstructorAndSection();
@@ -156,5 +173,19 @@ class InstructorDashboardApiTest extends TestCase
              ->withHeaders(['X-Tenant-ID' => $tenant->id])
              ->getJson("/api/v1/instructor/sections/{$section->id}/enrolments")
              ->assertOk();
+    }
+
+    #[Test]
+    public function ta_cannot_see_unassigned_section_enrolments(): void
+    {
+        ['tenant' => $tenant, 'section' => $section] =
+            $this->buildTenantWithInstructorAndSection();
+
+        $ta = User::factory()->forTenant($tenant)->teachingAssistant()->create();
+
+        $this->actingAs($ta, 'sanctum')
+             ->withHeaders(['X-Tenant-ID' => $tenant->id])
+             ->getJson("/api/v1/instructor/sections/{$section->id}/enrolments")
+             ->assertForbidden();
     }
 }

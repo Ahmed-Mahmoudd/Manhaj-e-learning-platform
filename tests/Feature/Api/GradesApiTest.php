@@ -287,6 +287,26 @@ class GradesApiTest extends TestCase
     }
 
     #[Test]
+    public function teaching_assistant_cannot_publish_grade_item(): void
+    {
+        ['tenant' => $tenant, 'section' => $section, 'student' => $student] =
+            $this->scaffold();
+
+        $ta = User::factory()->forTenant($tenant)->teachingAssistant()->create();
+        $section->teachingAssistants()->attach($ta->id);
+
+        $item = GradeItem::create([
+            'tenant_id'  => $tenant->id, 'section_id' => $section->id,
+            'name'       => 'Assignment 1', 'type' => 'assignment', 'max_score' => 100,
+        ]);
+
+        $this->actingAs($ta, 'sanctum')
+             ->withHeaders($this->headers($tenant))
+             ->postJson("/api/v1/instructor/grade-items/{$item->id}/publish")
+             ->assertForbidden();
+    }
+
+    #[Test]
     public function other_instructor_cannot_enter_grades(): void
     {
         ['tenant' => $tenant, 'section' => $section, 'student' => $student] = $this->scaffold();

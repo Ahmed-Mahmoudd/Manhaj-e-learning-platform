@@ -63,7 +63,7 @@ Route::prefix('v1')->group(function () {
             Route::prefix('catalogue')->group(function () {
                 Route::get('courses',                       [CourseCatalogueController::class, 'index']);
                 Route::get('courses/{course}',              [CourseCatalogueController::class, 'show']);
-                Route::get('sections/{section}/availability',[CourseCatalogueController::class, 'sectionAvailability']);
+                Route::get('sections/{section}/availability', [CourseCatalogueController::class, 'sectionAvailability']);
             });
 
             // Student dashboard
@@ -86,126 +86,129 @@ Route::prefix('v1')->group(function () {
 
             // Instructor / TA dashboard
             Route::middleware('role:instructor,teaching_assistant')
-                 ->prefix('instructor')
-                 ->group(function () {
-                     Route::get('sections',                                    [InstructorDashboardController::class, 'mySections']);
-                     Route::get('sections/{section}/enrolments',               [InstructorDashboardController::class, 'sectionEnrolments']);
-                     // Grade items
-                     Route::get('sections/{section}/grade-items',              [GradeController::class, 'index']);
-                     Route::post('sections/{section}/grade-items',             [GradeController::class, 'store']);
-                     // Individual grades
-                     Route::post('grade-items/{item}/grades/{student}',        [GradeController::class, 'enterGrade']);
-                     Route::get('grade-items/{item}/grades',                   [GradeController::class, 'grades']);
-                     Route::post('grade-items/{item}/publish',                 [GradeController::class, 'publish']);
-                     // Announcements
-                     Route::get('sections/{section}/announcements',            [InstructorAnnouncementController::class, 'index']);
-                     Route::post('sections/{section}/announcements',           [InstructorAnnouncementController::class, 'store']);
-                     Route::post('announcements/{announcement}/publish',       [InstructorAnnouncementController::class, 'publish']);
-                 });
+                ->prefix('instructor')
+                ->group(function () {
+                    Route::get('sections',                                    [InstructorDashboardController::class, 'mySections']);
+                    Route::get('sections/{section}/enrolments',               [InstructorDashboardController::class, 'sectionEnrolments']);
+                    // Grade items
+                    Route::get('sections/{section}/grade-items',              [GradeController::class, 'index']);
+                    Route::post('sections/{section}/grade-items',             [GradeController::class, 'store']);
+                    // Individual grades
+                    Route::post('grade-items/{item}/grades/{student}',        [GradeController::class, 'enterGrade']);
+                    Route::get('grade-items/{item}/grades',                   [GradeController::class, 'grades']);
+                    Route::post('grade-items/{item}/publish',                 [GradeController::class, 'publish']);
+                    // Announcements
+                    Route::get('sections/{section}/announcements',            [InstructorAnnouncementController::class, 'index']);
+                    Route::post('sections/{section}/announcements',           [InstructorAnnouncementController::class, 'store']);
+                    Route::post('announcements/{announcement}/publish',       [InstructorAnnouncementController::class, 'publish']);
+                });
 
             // ── Discussion forum — shared (student + instructor + TA) ─────────
             Route::middleware('role:student,instructor,teaching_assistant')
-                 ->prefix('discuss')
-                 ->group(function () {
-                     // Thread list & view
-                     Route::get('sections/{section}/threads',   [DiscussionController::class, 'threads']);
-                     Route::get('threads/{thread}',             [DiscussionController::class, 'show']);
-                     // Create thread / reply
-                     Route::post('sections/{section}/threads',  [DiscussionController::class, 'store']);
-                     Route::post('threads/{thread}/posts',      [DiscussionController::class, 'addPost']);
-                     // Edit / delete own reply (ownership enforced in DiscussionService)
-                     Route::patch('posts/{post}',               [DiscussionController::class, 'updatePost']);
-                     Route::delete('posts/{post}',              [DiscussionController::class, 'deletePost']);
-                     // Upvote (toggle)
-                     Route::post('posts/{post}/vote',           [DiscussionController::class, 'vote']);
-                     // Instructor-gated (assertInstructor() inside controller)
-                     Route::post('threads/{thread}/pin',        [DiscussionController::class, 'pin']);
-                     Route::post('threads/{thread}/lock',       [DiscussionController::class, 'lock']);
-                     Route::post('posts/{post}/answer',         [DiscussionController::class, 'markAnswer']);
-                 });
+                ->prefix('discuss')
+                ->group(function () {
+                    // Thread list & view
+                    Route::get('sections/{section}/threads',   [DiscussionController::class, 'threads']);
+                    Route::get('threads/{thread}',             [DiscussionController::class, 'show']);
+                    // Create thread / reply
+                    Route::post('sections/{section}/threads',  [DiscussionController::class, 'store']);
+                    Route::post('threads/{thread}/posts',      [DiscussionController::class, 'addPost']);
+                    // Edit / delete own reply (ownership enforced in DiscussionService)
+                    Route::patch('posts/{post}',               [DiscussionController::class, 'updatePost']);
+                    Route::delete('posts/{post}',              [DiscussionController::class, 'deletePost']);
+                    // Upvote (toggle)
+                    Route::post('posts/{post}/vote',           [DiscussionController::class, 'vote']);
+                    // Instructor-gated (assertInstructor() inside controller)
+                    Route::post('threads/{thread}/pin',        [DiscussionController::class, 'pin']);
+                    Route::post('threads/{thread}/lock',       [DiscussionController::class, 'lock']);
+                    Route::post('posts/{post}/answer',         [DiscussionController::class, 'markAnswer']);
+                });
+
+            Route::middleware('role:university_admin,faculty_admin')
+                ->prefix('admin')
+                ->group(function () {
+                    Route::get('dashboard', [AdminDashboardController::class, 'index']);
+                    Route::get('terms',     [TermController::class, 'index']);
+                });
 
             // ── University Admin (institutional structure + terms) ────────────
             Route::middleware('role:university_admin')
-                 ->prefix('admin')
-                 ->group(function () {
-                     Route::get('dashboard', [AdminDashboardController::class, 'index']);
+                ->prefix('admin')
+                ->group(function () {
 
-                     Route::get('faculties',              [FacultyController::class, 'index']);
-                     Route::post('faculties',             [FacultyController::class, 'store']);
-                     Route::get('faculties/{faculty}',    [FacultyController::class, 'show']);
-                     Route::patch('faculties/{faculty}',  [FacultyController::class, 'update']);
-                     Route::delete('faculties/{faculty}', [FacultyController::class, 'destroy']);
+                    Route::get('faculties',              [FacultyController::class, 'index']);
+                    Route::post('faculties',             [FacultyController::class, 'store']);
+                    Route::get('faculties/{faculty}',    [FacultyController::class, 'show']);
+                    Route::patch('faculties/{faculty}',  [FacultyController::class, 'update']);
+                    Route::delete('faculties/{faculty}', [FacultyController::class, 'destroy']);
 
-                     Route::get('terms',          [TermController::class, 'index']);
-                     Route::post('terms',         [TermController::class, 'store']);
-                     Route::get('terms/{term}',   [TermController::class, 'show']);
-                     Route::patch('terms/{term}', [TermController::class, 'update']);
-                     Route::post('terms/{term}/activate',   [TermController::class, 'activate']);
-                     Route::post('terms/{term}/deactivate', [TermController::class, 'deactivate']);
-                 });
+                    Route::post('terms',         [TermController::class, 'store']);
+                    Route::get('terms/{term}',   [TermController::class, 'show']);
+                    Route::patch('terms/{term}', [TermController::class, 'update']);
+                    Route::post('terms/{term}/activate',   [TermController::class, 'activate']);
+                    Route::post('terms/{term}/deactivate', [TermController::class, 'deactivate']);
+                });
 
             // ── Faculty Admin (faculty-scoped academic operations) ────────────
             Route::middleware('role:faculty_admin')
-                 ->prefix('admin')
-                 ->group(function () {
-                     Route::get('dashboard', [AdminDashboardController::class, 'index']);
+                ->prefix('admin')
+                ->group(function () {
 
-                     Route::get('departments',                [DepartmentController::class, 'index']);
-                     Route::post('departments',               [DepartmentController::class, 'store']);
-                     Route::get('departments/{department}',   [DepartmentController::class, 'show']);
-                     Route::patch('departments/{department}', [DepartmentController::class, 'update']);
-                     Route::delete('departments/{department}',[DepartmentController::class, 'destroy']);
+                    Route::get('departments',                [DepartmentController::class, 'index']);
+                    Route::post('departments',               [DepartmentController::class, 'store']);
+                    Route::get('departments/{department}',   [DepartmentController::class, 'show']);
+                    Route::patch('departments/{department}', [DepartmentController::class, 'update']);
+                    Route::delete('departments/{department}', [DepartmentController::class, 'destroy']);
 
-                     Route::get('programmes',               [ProgrammeController::class, 'index']);
-                     Route::post('programmes',              [ProgrammeController::class, 'store']);
-                     Route::get('programmes/{programme}',   [ProgrammeController::class, 'show']);
-                     Route::patch('programmes/{programme}', [ProgrammeController::class, 'update']);
-                     Route::delete('programmes/{programme}',[ProgrammeController::class, 'destroy']);
+                    Route::get('programmes',               [ProgrammeController::class, 'index']);
+                    Route::post('programmes',              [ProgrammeController::class, 'store']);
+                    Route::get('programmes/{programme}',   [ProgrammeController::class, 'show']);
+                    Route::patch('programmes/{programme}', [ProgrammeController::class, 'update']);
+                    Route::delete('programmes/{programme}', [ProgrammeController::class, 'destroy']);
 
-                     Route::get('courses',            [CourseAdminController::class, 'index']);
-                     Route::post('courses',           [CourseAdminController::class, 'store']);
-                     Route::get('courses/{course}',   [CourseAdminController::class, 'show']);
-                     Route::patch('courses/{course}', [CourseAdminController::class, 'update']);
-                     Route::delete('courses/{course}',[CourseAdminController::class, 'destroy']);
+                    Route::get('courses',            [CourseAdminController::class, 'index']);
+                    Route::post('courses',           [CourseAdminController::class, 'store']);
+                    Route::get('courses/{course}',   [CourseAdminController::class, 'show']);
+                    Route::patch('courses/{course}', [CourseAdminController::class, 'update']);
+                    Route::delete('courses/{course}', [CourseAdminController::class, 'destroy']);
 
-                     Route::get('sections',             [SectionAdminController::class, 'index']);
-                     Route::post('sections',            [SectionAdminController::class, 'store']);
-                     Route::get('sections/{section}',   [SectionAdminController::class, 'show']);
-                     Route::patch('sections/{section}', [SectionAdminController::class, 'update']);
-                     Route::delete('sections/{section}',[SectionAdminController::class, 'destroy']);
+                    Route::get('sections',             [SectionAdminController::class, 'index']);
+                    Route::post('sections',            [SectionAdminController::class, 'store']);
+                    Route::get('sections/{section}',   [SectionAdminController::class, 'show']);
+                    Route::patch('sections/{section}', [SectionAdminController::class, 'update']);
+                    Route::delete('sections/{section}', [SectionAdminController::class, 'destroy']);
 
-                     Route::get('users',               [UserAdminController::class, 'index']);
-                     Route::post('users',              [UserAdminController::class, 'store']);
-                     Route::get('users/{user}',        [UserAdminController::class, 'show']);
-                     Route::patch('users/{user}/role', [UserAdminController::class, 'updateRole']);
-                 });
-
+                    Route::get('users',               [UserAdminController::class, 'index']);
+                    Route::post('users',              [UserAdminController::class, 'store']);
+                    Route::get('users/{user}',        [UserAdminController::class, 'show']);
+                    Route::patch('users/{user}/role', [UserAdminController::class, 'updateRole']);
+                });
         });
     });
 });
 
 // ─── Platform Admin Routes (no tenant scope needed) ─────────────────────────
 Route::prefix('v1/platform')
-     ->middleware(['auth:sanctum', 'role:platform_admin'])
-     ->group(function () {
-         Route::get('tenants',                       [TenantController::class, 'index']);
-         Route::post('tenants',                      [TenantController::class, 'store']);
-         Route::get('tenants/{tenant}',              [TenantController::class, 'show']);
-         Route::patch('tenants/{tenant}',            [TenantController::class, 'update']);
-         Route::post('tenants/{tenant}/activate',    [TenantController::class, 'activate']);
-         Route::post('tenants/{tenant}/deactivate',  [TenantController::class, 'deactivate']);
-         Route::get('tenants/{tenant}/stats',        [TenantController::class, 'stats']);
+    ->middleware(['auth:sanctum', 'role:platform_admin'])
+    ->group(function () {
+        Route::get('tenants',                       [TenantController::class, 'index']);
+        Route::post('tenants',                      [TenantController::class, 'store']);
+        Route::get('tenants/{tenant}',              [TenantController::class, 'show']);
+        Route::patch('tenants/{tenant}',            [TenantController::class, 'update']);
+        Route::post('tenants/{tenant}/activate',    [TenantController::class, 'activate']);
+        Route::post('tenants/{tenant}/deactivate',  [TenantController::class, 'deactivate']);
+        Route::get('tenants/{tenant}/stats',        [TenantController::class, 'stats']);
 
-         Route::get('users',                         [PlatformUserController::class, 'index']);
-         Route::post('users',                        [PlatformUserController::class, 'store']);
-         Route::get('users/{user}',                  [PlatformUserController::class, 'show']);
-         Route::post('users/{user}/impersonate',     [PlatformUserController::class, 'impersonate']);
-     });
+        Route::get('users',                         [PlatformUserController::class, 'index']);
+        Route::post('users',                        [PlatformUserController::class, 'store']);
+        Route::get('users/{user}',                  [PlatformUserController::class, 'show']);
+        Route::post('users/{user}/impersonate',     [PlatformUserController::class, 'impersonate']);
+    });
 
 // ─── INTERN B — Internal ML integration (machine-to-machine) ───────────────
 Route::prefix('v1/internal')
-     ->middleware('internal.token')
-     ->group(function () {
-         Route::post('ml/recommendations', [MlRecommendationController::class, 'ingest']);
-         Route::post('webhook',            [MlRecommendationController::class, 'webhook']);
-     });
+    ->middleware('internal.token')
+    ->group(function () {
+        Route::post('ml/recommendations', [MlRecommendationController::class, 'ingest']);
+        Route::post('webhook',            [MlRecommendationController::class, 'webhook']);
+    });

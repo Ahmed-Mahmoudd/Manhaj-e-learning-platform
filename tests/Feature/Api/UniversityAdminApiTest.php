@@ -74,7 +74,13 @@ class UniversityAdminApiTest extends TestCase
              ->getJson('/api/v1/admin/departments')->assertForbidden();
 
         $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
+             ->getJson('/api/v1/admin/programmes')->assertForbidden();
+
+        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
              ->getJson('/api/v1/admin/courses')->assertForbidden();
+
+        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
+             ->getJson('/api/v1/admin/sections')->assertForbidden();
 
         $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
              ->getJson('/api/v1/admin/users')->assertForbidden();
@@ -94,7 +100,11 @@ class UniversityAdminApiTest extends TestCase
                      'total_students',
                      'total_faculties',
                      'total_departments',
-                     'faculty_summaries',
+                     'total_programmes',
+                     'total_enrolments',
+                     'faculty_summaries' => [
+                         '*' => ['id', 'name_en', 'name_ar', 'code', 'departments_count', 'programmes_count', 'courses_count', 'students_count'],
+                     ],
                  ],
              ]);
     }
@@ -137,48 +147,28 @@ class UniversityAdminApiTest extends TestCase
              ->assertUnprocessable()->assertJsonPath('message', 'Cannot delete faculty with existing departments.');
     }
 
-    // ─── Departments ──────────────────────────────────────────────────────────
-
     #[Test]
-    public function admin_can_create_department(): void
+    public function admin_cannot_see_other_tenant_faculties(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin, 'faculty' => $faculty] = $this->scaffold();
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->postJson('/api/v1/admin/departments', [
-                 'faculty_id' => $faculty->id, 'name_en' => 'Computer Science', 'name_ar' => 'علوم الحاسب', 'code' => 'CS',
-             ])->assertCreated()->assertJsonPath('department.code', 'CS');
-    }
+        ['admin' => $admin, 'tenant' => $tenant] = $this->scaffold();
+        $other = Tenant::factory()->create();
+        Faculty::factory()->create(['tenant_id' => $other->id]);
 
-    #[Test]
-    public function admin_can_create_department_without_name_ar(): void
-    {
-        ['tenant' => $tenant, 'admin' => $admin, 'faculty' => $faculty] = $this->scaffold();
         $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->postJson('/api/v1/admin/departments', [
-                 'faculty_id' => $faculty->id, 'name_en' => 'Information Systems', 'code' => 'IS',
-             ])->assertCreated()
-               ->assertJsonPath('department.code', 'IS')
-               ->assertJsonPath('department.name_ar', 'Information Systems');
-    }
-
-    #[Test]
-    public function admin_can_filter_departments_by_faculty(): void
-    {
-        ['tenant' => $tenant, 'admin' => $admin, 'faculty' => $faculty] = $this->scaffold();
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->getJson("/api/v1/admin/departments?faculty_id={$faculty->id}")
-             ->assertOk()->assertJsonCount(1, 'departments');
-    }
-
-    #[Test]
-    public function cannot_delete_department_with_courses(): void
-    {
-        ['tenant' => $tenant, 'admin' => $admin, 'dept' => $dept] = $this->scaffold();
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->deleteJson("/api/v1/admin/departments/{$dept->id}")->assertUnprocessable();
+             ->getJson('/api/v1/admin/faculties')->assertOk()->assertJsonCount(1, 'faculties');
     }
 
     // ─── Terms ────────────────────────────────────────────────────────────────
+
+    #[Test]
+    public function admin_can_list_terms(): void
+    {
+        ['tenant' => $tenant, 'admin' => $admin] = $this->scaffold();
+        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
+             ->getJson('/api/v1/admin/terms')
+             ->assertOk()
+             ->assertJsonStructure(['terms']);
+    }
 
     #[Test]
     public function admin_can_create_term(): void
@@ -206,129 +196,15 @@ class UniversityAdminApiTest extends TestCase
         $this->assertDatabaseHas('academic_terms', ['id' => $newTerm->id,    'is_active' => true]);
     }
 
-    // ─── Courses ──────────────────────────────────────────────────────────────
-
     #[Test]
-    public function admin_can_create_course(): void
+    public function admin_can_deactivate_term(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin, 'dept' => $dept] = $this->scaffold();
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->postJson('/api/v1/admin/courses', [
-                 'department_id' => $dept->id, 'code' => 'CS101',
-                 'title_en' => 'Intro to Programming', 'title_ar' => 'مقدمة في البرمجة', 'credit_hours' => 3,
-             ])->assertCreated()->assertJsonPath('course.code', 'CS101');
-    }
-
-    #[Test]
-    public function admin_can_update_course_prerequisites(): void
-    {
-        ['tenant' => $tenant, 'admin' => $admin, 'dept' => $dept, 'course' => $course] = $this->scaffold();
-        $prereq = Course::factory()->create(['tenant_id' => $tenant->id, 'department_id' => $dept->id]);
+        ['tenant' => $tenant, 'admin' => $admin, 'term' => $activeTerm] = $this->scaffold();
 
         $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->patchJson("/api/v1/admin/courses/{$course->id}", ['prerequisites' => [$prereq->id]])
-             ->assertOk();
+             ->postJson("/api/v1/admin/terms/{$activeTerm->id}/deactivate")
+             ->assertOk()->assertJsonPath('term.is_active', false);
 
-        $this->assertDatabaseHas('course_prerequisites', [
-            'course_id' => $course->id, 'prerequisite_id' => $prereq->id,
-        ]);
-    }
-
-    #[Test]
-    public function cannot_delete_course_with_sections(): void
-    {
-        ['tenant' => $tenant, 'admin' => $admin, 'course' => $course] = $this->scaffold();
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->deleteJson("/api/v1/admin/courses/{$course->id}")->assertUnprocessable();
-    }
-
-    // ─── Sections ─────────────────────────────────────────────────────────────
-
-    #[Test]
-    public function admin_can_create_section(): void
-    {
-        ['tenant' => $tenant, 'admin' => $admin, 'course' => $course,
-         'term' => $term, 'instructor' => $instructor] = $this->scaffold();
-
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->postJson('/api/v1/admin/sections', [
-                 'course_id' => $course->id, 'academic_term_id' => $term->id,
-                 'instructor_id' => $instructor->id, 'section_number' => 'B', 'capacity' => 40,
-             ])->assertCreated()->assertJsonPath('section.section_number', 'B');
-    }
-
-    #[Test]
-    public function admin_can_update_section_capacity(): void
-    {
-        ['tenant' => $tenant, 'admin' => $admin, 'section' => $section] = $this->scaffold();
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->patchJson("/api/v1/admin/sections/{$section->id}", ['capacity' => 99])
-             ->assertOk()->assertJsonPath('section.capacity', 99);
-    }
-
-    #[Test]
-    public function cannot_delete_section_with_active_enrolments(): void
-    {
-        ['tenant' => $tenant, 'admin' => $admin, 'section' => $section] = $this->scaffold();
-        $student = User::factory()->forTenant($tenant)->student()->create();
-        Enrolment::create([
-            'tenant_id' => $tenant->id, 'student_id' => $student->id,
-            'section_id' => $section->id, 'status' => 'enrolled', 'enrolled_at' => now(),
-        ]);
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->deleteJson("/api/v1/admin/sections/{$section->id}")->assertUnprocessable();
-    }
-
-    // ─── Users ────────────────────────────────────────────────────────────────
-
-    #[Test]
-    public function admin_can_list_users(): void
-    {
-        ['tenant' => $tenant, 'admin' => $admin] = $this->scaffold();
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->getJson('/api/v1/admin/users')->assertOk()->assertJsonStructure(['data', 'meta']);
-    }
-
-    #[Test]
-    public function admin_can_create_user(): void
-    {
-        ['tenant' => $tenant, 'admin' => $admin] = $this->scaffold();
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->postJson('/api/v1/admin/users', [
-                 'name' => 'New Instructor', 'email' => 'new.inst@test.com', 'role' => 'instructor',
-                 'password' => 'secure-pass-123',
-             ])->assertCreated()->assertJsonPath('user.role', 'instructor');
-        $this->assertDatabaseHas('users', ['email' => 'new.inst@test.com', 'tenant_id' => $tenant->id]);
-    }
-
-    #[Test]
-    public function admin_can_change_user_role(): void
-    {
-        ['tenant' => $tenant, 'admin' => $admin] = $this->scaffold();
-        $user = User::factory()->forTenant($tenant)->student()->create();
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->patchJson("/api/v1/admin/users/{$user->id}/role", ['role' => 'teaching_assistant'])
-             ->assertOk()->assertJsonPath('user.role', 'teaching_assistant');
-    }
-
-    #[Test]
-    public function admin_cannot_modify_platform_admin_role(): void
-    {
-        ['tenant' => $tenant, 'admin' => $admin] = $this->scaffold();
-        $pa = User::factory()->create(['role' => 'platform_admin', 'tenant_id' => $tenant->id]);
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->patchJson("/api/v1/admin/users/{$pa->id}/role", ['role' => 'student'])
-             ->assertForbidden();
-    }
-
-    #[Test]
-    public function admin_cannot_see_other_tenant_faculties(): void
-    {
-        ['admin' => $admin, 'tenant' => $tenant] = $this->scaffold();
-        $other = Tenant::factory()->create();
-        Faculty::factory()->create(['tenant_id' => $other->id]);
-
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->getJson('/api/v1/admin/faculties')->assertOk()->assertJsonCount(1, 'faculties');
+        $this->assertDatabaseHas('academic_terms', ['id' => $activeTerm->id, 'is_active' => false]);
     }
 }

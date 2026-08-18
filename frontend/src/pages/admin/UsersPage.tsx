@@ -12,18 +12,22 @@ import {
   FormError,
 } from '@/components/admin/AdminUi';
 import { useLocale } from '@/i18n/LocaleContext';
+import { useAuth } from '@/auth/AuthContext';
 import { displayRole } from '@/auth/roles';
 import type { AdminUser } from '@/types/admin';
 import type { UserRole } from '@/types/api';
 
-const ROLES: UserRole[] = ['university_admin', 'faculty_admin', 'instructor', 'teaching_assistant', 'student'];
-const MANAGEABLE: UserRole[] = ['instructor', 'teaching_assistant', 'student', 'university_admin', 'faculty_admin'];
+const ALL_ROLES: UserRole[] = ['university_admin', 'faculty_admin', 'instructor', 'teaching_assistant', 'student'];
+const FACULTY_ROLES: UserRole[] = ['instructor', 'teaching_assistant', 'student'];
 
 export function UsersPage() {
+  const { user } = useAuth();
   const { t, locale } = useLocale();
   const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
+
+  const availableRoles = user?.role === 'faculty_admin' ? FACULTY_ROLES : ALL_ROLES;
 
   const { data, isLoading, error } = useQuery({
     queryKey: adminKeys.users(roleFilter, page),
@@ -51,14 +55,20 @@ export function UsersPage() {
         className="max-w-xs"
       >
         <option value="">{t('allRoles')}</option>
-        {ROLES.map((r) => (
+        {availableRoles.map((r) => (
           <option key={r} value={r}>
             {displayRole(r, locale)}
           </option>
         ))}
       </AdminSelect>
 
-      {showForm && <CreateForm onDone={() => setShowForm(false)} locale={locale} />}
+      {showForm && (
+        <CreateForm
+          onDone={() => setShowForm(false)}
+          locale={locale}
+          availableRoles={availableRoles}
+        />
+      )}
 
       <AsyncPanel
         isLoading={isLoading}
@@ -69,7 +79,7 @@ export function UsersPage() {
         <AdminPanel>
           <AdminTable headers={[t('studentName'), t('email'), t('role'), t('actions')]}>
             {(data?.data ?? []).map((u) => (
-              <UserRow key={u.id} user={u} locale={locale} />
+              <UserRow key={u.id} user={u} locale={locale} availableRoles={availableRoles} />
             ))}
           </AdminTable>
         </AdminPanel>
@@ -85,7 +95,15 @@ export function UsersPage() {
   );
 }
 
-function UserRow({ user, locale }: { user: AdminUser; locale: 'en' | 'ar' }) {
+function UserRow({
+  user,
+  locale,
+  availableRoles,
+}: {
+  user: AdminUser;
+  locale: 'en' | 'ar';
+  availableRoles: UserRole[];
+}) {
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const [role, setRole] = useState<UserRole>(user.role as UserRole);
@@ -103,7 +121,7 @@ function UserRow({ user, locale }: { user: AdminUser; locale: 'en' | 'ar' }) {
       <td className="px-4 py-3 font-mono text-xs text-ink/60">{user.email}</td>
       <td className="px-4 py-3">
         <AdminSelect value={role} onChange={(e) => setRole(e.target.value as UserRole)} className="text-sm">
-          {MANAGEABLE.map((r) => (
+          {availableRoles.map((r) => (
             <option key={r} value={r}>
               {displayRole(r, locale)}
             </option>
@@ -124,12 +142,20 @@ function UserRow({ user, locale }: { user: AdminUser; locale: 'en' | 'ar' }) {
   );
 }
 
-function CreateForm({ onDone, locale }: { onDone: () => void; locale: 'en' | 'ar' }) {
+function CreateForm({
+  onDone,
+  locale,
+  availableRoles,
+}: {
+  onDone: () => void;
+  locale: 'en' | 'ar';
+  availableRoles: UserRole[];
+}) {
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<UserRole>('student');
+  const [role, setRole] = useState<UserRole>(availableRoles[0] ?? 'student');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState<Error | null>(null);
 
@@ -150,7 +176,7 @@ function CreateForm({ onDone, locale }: { onDone: () => void; locale: 'en' | 'ar
         <AdminInput placeholder={t('studentName')} value={name} onChange={(e) => setName(e.target.value)} />
         <AdminInput placeholder={t('email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <AdminSelect value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
-          {MANAGEABLE.map((r) => (
+          {availableRoles.map((r) => (
             <option key={r} value={r}>
               {displayRole(r, locale)}
             </option>

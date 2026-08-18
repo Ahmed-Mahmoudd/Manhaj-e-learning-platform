@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/auth/AuthContext';
 import {
   adminKeys,
   createDepartment,
@@ -22,18 +23,22 @@ import { useLocale } from '@/i18n/LocaleContext';
 import type { Department } from '@/types/admin';
 
 export function DepartmentsPage() {
+  const { user } = useAuth();
   const { t } = useLocale();
   const [facultyFilter, setFacultyFilter] = useState<number | ''>('');
   const [showForm, setShowForm] = useState(false);
 
+  const isFacultyAdmin = user?.role === 'faculty_admin';
+
   const facultiesQuery = useQuery({
     queryKey: adminKeys.faculties(),
     queryFn: fetchFaculties,
+    enabled: !isFacultyAdmin,
   });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: adminKeys.departments(facultyFilter || undefined),
-    queryFn: () => fetchDepartments(facultyFilter || undefined),
+    queryKey: adminKeys.departments(isFacultyAdmin ? undefined : (facultyFilter || undefined)),
+    queryFn: () => fetchDepartments(isFacultyAdmin ? undefined : (facultyFilter || undefined)),
   });
 
   return (
@@ -48,21 +53,24 @@ export function DepartmentsPage() {
         </AdminButton>
       </header>
 
-      <AdminSelect
-        value={facultyFilter}
-        onChange={(e) => setFacultyFilter(e.target.value ? Number(e.target.value) : '')}
-        className="max-w-xs"
-      >
-        <option value="">{t('allFaculties')}</option>
-        {(facultiesQuery.data?.faculties ?? []).map((f) => (
-          <option key={f.id} value={f.id}>
-            {f.code} — {f.name_en}
-          </option>
-        ))}
-      </AdminSelect>
+      {!isFacultyAdmin && (
+        <AdminSelect
+          value={facultyFilter}
+          onChange={(e) => setFacultyFilter(e.target.value ? Number(e.target.value) : '')}
+          className="max-w-xs"
+        >
+          <option value="">{t('allFaculties')}</option>
+          {(facultiesQuery.data?.faculties ?? []).map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.code} — {f.name_en}
+            </option>
+          ))}
+        </AdminSelect>
+      )}
 
       {showForm && (
         <CreateForm
+          isFacultyAdmin={isFacultyAdmin}
           faculties={facultiesQuery.data?.faculties ?? []}
           onDone={() => setShowForm(false)}
         />
@@ -89,7 +97,7 @@ export function DepartmentsPage() {
 }
 
 function DeptRow({ dept }: { dept: Department }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [nameEn, setNameEn] = useState(dept.name_en);
@@ -136,10 +144,12 @@ function DeptRow({ dept }: { dept: Department }) {
     );
   }
 
+  const displayName = locale === 'ar' && dept.name_ar ? dept.name_ar : dept.name_en;
+
   return (
     <tr>
       <td className={`${adminTableCell} font-mono`}>{dept.code}</td>
-      <td className={adminTableCell}>{dept.name_en}</td>
+      <td className={adminTableCell}>{displayName}</td>
       <td className={`${adminTableCell} text-ink/60`}>{dept.faculty?.code ?? '—'}</td>
       <td className={adminTableCell}>
         <div className="flex flex-wrap gap-2">
@@ -162,9 +172,11 @@ function DeptRow({ dept }: { dept: Department }) {
 }
 
 function CreateForm({
+  isFacultyAdmin,
   faculties,
   onDone,
 }: {
+  isFacultyAdmin: boolean;
   faculties: { id: number; code: string; name_en: string }[];
   onDone: () => void;
 }) {
@@ -179,7 +191,7 @@ function CreateForm({
   const mutation = useMutation({
     mutationFn: () =>
       createDepartment({
-        faculty_id: facultyId,
+        faculty_id: isFacultyAdmin ? 0 : facultyId,
         name_en: nameEn,
         name_ar: nameAr || undefined,
         code,
@@ -193,13 +205,15 @@ function CreateForm({
 
   return (
     <AdminPanel className="space-y-3 p-5">
-      <AdminSelect value={facultyId} onChange={(e) => setFacultyId(Number(e.target.value))}>
-        {faculties.map((f) => (
-          <option key={f.id} value={f.id}>
-            {f.code}
-          </option>
-        ))}
-      </AdminSelect>
+      {!isFacultyAdmin && faculties.length > 0 && (
+        <AdminSelect value={facultyId} onChange={(e) => setFacultyId(Number(e.target.value))}>
+          {faculties.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.code}
+            </option>
+          ))}
+        </AdminSelect>
+      )}
       <div className="flex flex-wrap gap-3">
         <AdminInput placeholder={t('code')} value={code} onChange={(e) => setCode(e.target.value)} />
         <AdminInput placeholder={t('nameEn')} value={nameEn} onChange={(e) => setNameEn(e.target.value)} />

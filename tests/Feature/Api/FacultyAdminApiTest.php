@@ -23,31 +23,92 @@ class FacultyAdminApiTest extends TestCase
     protected function tearDown(): void
     {
         TenantContext::clear();
+
         parent::tearDown();
     }
 
     private function scaffold(): array
     {
-        $tenant     = Tenant::factory()->create();
-        $faculty    = Faculty::factory()->create(['tenant_id' => $tenant->id]);
-        $otherFac   = Faculty::factory()->create(['tenant_id' => $tenant->id, 'code' => 'ART']);
-        $admin      = User::factory()->forTenant($tenant)->facultyAdmin()->create([
+        $tenant = Tenant::factory()->create();
+
+        $faculty = Faculty::factory()->create([
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $otherFac = Faculty::factory()->create([
+            'tenant_id' => $tenant->id,
+            'code'      => 'ART',
+        ]);
+
+        $admin = User::factory()
+            ->forTenant($tenant)
+            ->facultyAdmin()
+            ->create([
+                'faculty_id' => $faculty->id,
+            ]);
+
+        $dept = Department::factory()->create([
+            'tenant_id'  => $tenant->id,
             'faculty_id' => $faculty->id,
         ]);
-        $dept       = Department::factory()->create(['tenant_id' => $tenant->id, 'faculty_id' => $faculty->id]);
-        $otherDept  = Department::factory()->create(['tenant_id' => $tenant->id, 'faculty_id' => $otherFac->id]);
-        $term       = AcademicTerm::factory()->active()->create(['tenant_id' => $tenant->id]);
-        $course     = Course::factory()->create(['tenant_id' => $tenant->id, 'department_id' => $dept->id]);
-        $otherCourse = Course::factory()->create(['tenant_id' => $tenant->id, 'department_id' => $otherDept->id]);
-        $instructor = User::factory()->forTenant($tenant)->instructor()->create();
-        $student    = User::factory()->forTenant($tenant)->student()->create();
-        $section    = Section::factory()->create([
+
+        $otherDept = Department::factory()->create([
+            'tenant_id'  => $tenant->id,
+            'faculty_id' => $otherFac->id,
+        ]);
+
+        $term = AcademicTerm::factory()
+            ->active()
+            ->create([
+                'tenant_id' => $tenant->id,
+            ]);
+
+        $course = Course::factory()->create([
+            'tenant_id'     => $tenant->id,
+            'department_id' => $dept->id,
+        ]);
+
+        $otherCourse = Course::factory()->create([
+            'tenant_id'     => $tenant->id,
+            'department_id' => $otherDept->id,
+        ]);
+
+        $instructor = User::factory()
+            ->forTenant($tenant)
+            ->instructor()
+            ->create([
+                'faculty_id' => $faculty->id,
+            ]);
+
+        $otherInstructor = User::factory()
+            ->forTenant($tenant)
+            ->instructor()
+            ->create([
+                'faculty_id' => $otherFac->id,
+            ]);
+
+        $student = User::factory()
+            ->forTenant($tenant)
+            ->student()
+            ->create([
+                'faculty_id' => $faculty->id,
+            ]);
+
+        $otherStudent = User::factory()
+            ->forTenant($tenant)
+            ->student()
+            ->create([
+                'faculty_id' => $otherFac->id,
+            ]);
+
+        $section = Section::factory()->create([
             'tenant_id'        => $tenant->id,
             'course_id'        => $course->id,
             'academic_term_id' => $term->id,
             'instructor_id'    => $instructor->id,
             'is_active'        => true,
         ]);
+
         Enrolment::create([
             'tenant_id'   => $tenant->id,
             'student_id'  => $student->id,
@@ -57,160 +118,310 @@ class FacultyAdminApiTest extends TestCase
         ]);
 
         return compact(
-            'tenant', 'admin', 'faculty', 'otherFac', 'dept', 'otherDept',
-            'term', 'course', 'otherCourse', 'section', 'instructor', 'student',
+            'tenant',
+            'admin',
+            'faculty',
+            'otherFac',
+            'dept',
+            'otherDept',
+            'term',
+            'course',
+            'otherCourse',
+            'section',
+            'instructor',
+            'otherInstructor',
+            'student',
+            'otherStudent',
         );
     }
 
-    private function h(Tenant $t): array
+    private function h(Tenant $tenant): array
     {
-        return ['X-Tenant-ID' => $t->id];
+        return [
+            'X-Tenant-ID' => $tenant->id,
+        ];
     }
 
     #[Test]
     public function faculty_admin_cannot_access_university_admin_routes(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin] = $this->scaffold();
+        [
+            'tenant' => $tenant,
+            'admin'  => $admin,
+        ] = $this->scaffold();
 
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->getJson('/api/v1/admin/faculties')->assertForbidden();
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->getJson('/api/v1/admin/faculties')
+            ->assertForbidden();
 
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->getJson('/api/v1/admin/terms')->assertForbidden();
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->postJson('/api/v1/admin/terms', [
+                'name'      => 'Summer 2026',
+                'type'      => 'summer',
+                'starts_at' => '2026-06-01',
+                'ends_at'   => '2026-08-30',
+            ])
+            ->assertForbidden();
     }
 
     #[Test]
     public function faculty_admin_dashboard_is_scoped_to_faculty(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin, 'faculty' => $faculty] = $this->scaffold();
+        [
+            'tenant'  => $tenant,
+            'admin'   => $admin,
+            'faculty' => $faculty,
+        ] = $this->scaffold();
 
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->getJson('/api/v1/admin/dashboard')
-             ->assertOk()
-             ->assertJsonPath('scope', 'faculty')
-             ->assertJsonPath('stats.faculty.id', $faculty->id)
-             ->assertJsonPath('stats.departments_count', 1);
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->getJson('/api/v1/admin/dashboard')
+            ->assertOk()
+            ->assertJsonPath('scope', 'faculty')
+            ->assertJsonPath('stats.faculty.id', $faculty->id)
+            ->assertJsonPath('stats.departments_count', 1);
     }
 
     #[Test]
     public function faculty_admin_only_sees_own_departments(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin] = $this->scaffold();
+        [
+            'tenant' => $tenant,
+            'admin'  => $admin,
+        ] = $this->scaffold();
 
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->getJson('/api/v1/admin/departments')
-             ->assertOk()
-             ->assertJsonCount(1, 'departments');
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->getJson('/api/v1/admin/departments')
+            ->assertOk()
+            ->assertJsonCount(1, 'departments');
     }
 
     #[Test]
     public function faculty_admin_can_create_department_in_own_faculty(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin, 'faculty' => $faculty] = $this->scaffold();
+        [
+            'tenant'  => $tenant,
+            'admin'   => $admin,
+            'faculty' => $faculty,
+        ] = $this->scaffold();
 
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->postJson('/api/v1/admin/departments', [
-                 'faculty_id' => $faculty->id,
-                 'name_en'    => 'Information Systems',
-                 'code'       => 'IS',
-             ])
-             ->assertCreated()
-             ->assertJsonPath('department.faculty_id', $faculty->id);
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->postJson('/api/v1/admin/departments', [
+                'faculty_id' => $faculty->id,
+                'name_en'    => 'Information Systems',
+                'code'       => 'IS',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('department.faculty_id', $faculty->id);
     }
 
     #[Test]
     public function faculty_admin_cannot_access_other_faculty_department(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin, 'otherDept' => $otherDept] = $this->scaffold();
+        [
+            'tenant'    => $tenant,
+            'admin'     => $admin,
+            'otherDept' => $otherDept,
+        ] = $this->scaffold();
 
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->getJson("/api/v1/admin/departments/{$otherDept->id}")
-             ->assertForbidden();
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->getJson("/api/v1/admin/departments/{$otherDept->id}")
+            ->assertForbidden();
     }
 
     #[Test]
     public function faculty_admin_can_manage_programmes(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin, 'dept' => $dept] = $this->scaffold();
+        [
+            'tenant' => $tenant,
+            'admin'  => $admin,
+            'dept'   => $dept,
+        ] = $this->scaffold();
 
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->postJson('/api/v1/admin/programmes', [
-                 'department_id'  => $dept->id,
-                 'name_en'        => 'BSc CS',
-                 'code'           => 'BSCS',
-                 'grading_type'   => 'credit_gpa',
-                 'duration_years' => 4,
-             ])
-             ->assertCreated()
-             ->assertJsonPath('programme.code', 'BSCS');
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->postJson('/api/v1/admin/programmes', [
+                'department_id'  => $dept->id,
+                'name_en'        => 'BSc CS',
+                'code'           => 'BSCS',
+                'grading_type'   => 'credit_gpa',
+                'duration_years' => 4,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('programme.code', 'BSCS');
     }
 
     #[Test]
     public function faculty_admin_only_sees_own_courses(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin] = $this->scaffold();
+        [
+            'tenant' => $tenant,
+            'admin'  => $admin,
+        ] = $this->scaffold();
 
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->getJson('/api/v1/admin/courses')
-             ->assertOk()
-             ->assertJsonCount(1, 'courses');
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->getJson('/api/v1/admin/courses')
+            ->assertOk()
+            ->assertJsonCount(1, 'courses');
     }
 
     #[Test]
     public function faculty_admin_can_create_course(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin, 'dept' => $dept] = $this->scaffold();
+        [
+            'tenant' => $tenant,
+            'admin'  => $admin,
+            'dept'   => $dept,
+        ] = $this->scaffold();
 
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->postJson('/api/v1/admin/courses', [
-                 'department_id' => $dept->id,
-                 'code'          => 'CS201',
-                 'title_en'      => 'Data Structures',
-                 'credit_hours'  => 3,
-             ])
-             ->assertCreated()
-             ->assertJsonPath('course.code', 'CS201');
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->postJson('/api/v1/admin/courses', [
+                'department_id' => $dept->id,
+                'code'          => 'CS201',
+                'title_en'      => 'Data Structures',
+                'credit_hours'  => 3,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('course.code', 'CS201');
     }
 
     #[Test]
     public function faculty_admin_lists_faculty_scoped_users(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin, 'instructor' => $instructor, 'student' => $student] =
-            $this->scaffold();
+        [
+            'tenant'     => $tenant,
+            'admin'      => $admin,
+            'instructor' => $instructor,
+            'student'    => $student,
+        ] = $this->scaffold();
 
-        $response = $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-                         ->getJson('/api/v1/admin/users')
-                         ->assertOk();
+        $response = $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->getJson('/api/v1/admin/users')
+            ->assertOk();
 
         $emails = collect($response->json('data'))->pluck('email');
+
         $this->assertTrue($emails->contains($instructor->email));
         $this->assertTrue($emails->contains($student->email));
     }
 
     #[Test]
+    public function faculty_admin_cannot_see_other_faculty_users(): void
+    {
+        [
+            'tenant'           => $tenant,
+            'admin'            => $admin,
+            'otherInstructor'  => $otherInstructor,
+            'otherStudent'     => $otherStudent,
+        ] = $this->scaffold();
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->getJson('/api/v1/admin/users')
+            ->assertOk();
+
+        $emails = collect($response->json('data'))->pluck('email');
+
+        $this->assertFalse($emails->contains($otherInstructor->email));
+        $this->assertFalse($emails->contains($otherStudent->email));
+    }
+
+    #[Test]
     public function faculty_admin_can_create_instructor_user(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin] = $this->scaffold();
+        [
+            'tenant' => $tenant,
+            'admin'  => $admin,
+            'faculty' => $faculty,
+        ] = $this->scaffold();
 
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->postJson('/api/v1/admin/users', [
-                 'name'     => 'New Instructor',
-                 'email'    => 'new.inst@test.com',
-                 'role'     => 'instructor',
-                 'password' => 'secure-pass-123',
-             ])
-             ->assertCreated()
-             ->assertJsonPath('user.role', 'instructor');
+        $response = $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->postJson('/api/v1/admin/users', [
+                'name'     => 'New Instructor',
+                'email'    => 'new.inst@test.com',
+                'role'     => 'instructor',
+                'password' => 'secure-pass-123',
+            ])
+            ->assertCreated();
+
+        $response->assertJsonPath('user.role', 'instructor');
+        $response->assertJsonPath('user.faculty_id', $faculty->id);
     }
 
     #[Test]
     public function faculty_admin_cannot_assign_university_admin_role(): void
     {
-        ['tenant' => $tenant, 'admin' => $admin, 'student' => $student] = $this->scaffold();
+        [
+            'tenant' => $tenant,
+            'admin'  => $admin,
+            'student' => $student,
+        ] = $this->scaffold();
 
-        $this->actingAs($admin, 'sanctum')->withHeaders($this->h($tenant))
-             ->patchJson("/api/v1/admin/users/{$student->id}/role", ['role' => 'university_admin'])
-             ->assertUnprocessable()
-             ->assertJsonValidationErrors(['role']);
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->patchJson(
+                "/api/v1/admin/users/{$student->id}/role",
+                ['role' => 'university_admin']
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['role']);
+    }
+
+    #[Test]
+    public function faculty_admin_users_list_excludes_admins(): void
+    {
+        [
+            'tenant'  => $tenant,
+            'admin'   => $admin,
+            'faculty' => $faculty,
+        ] = $this->scaffold();
+
+        $uniAdmin = User::factory()->forTenant($tenant)->create([
+            'role'       => 'university_admin',
+            'faculty_id' => $faculty->id,
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->getJson('/api/v1/admin/users')
+            ->assertOk();
+
+        $emails = collect($response->json('data'))->pluck('email');
+        $this->assertFalse($emails->contains($admin->email));
+        $this->assertFalse($emails->contains($uniAdmin->email));
+    }
+
+    #[Test]
+    public function faculty_admin_cannot_view_or_modify_admin_user(): void
+    {
+        [
+            'tenant'  => $tenant,
+            'admin'   => $admin,
+            'faculty' => $faculty,
+        ] = $this->scaffold();
+
+        $uniAdmin = User::factory()->forTenant($tenant)->create([
+            'role'       => 'university_admin',
+            'faculty_id' => $faculty->id,
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->getJson("/api/v1/admin/users/{$uniAdmin->id}")
+            ->assertForbidden();
+
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders($this->h($tenant))
+            ->patchJson("/api/v1/admin/users/{$uniAdmin->id}/role", ['role' => 'student'])
+            ->assertForbidden();
     }
 }

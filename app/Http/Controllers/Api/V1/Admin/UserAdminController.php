@@ -19,14 +19,14 @@ class UserAdminController extends Controller
 
     /** Roles a faculty admin may assign within their faculty. */
     const FACULTY_MANAGEABLE_ROLES = [
-        'instructor', 'teaching_assistant', 'student',
+        'instructor',
+        'teaching_assistant',
+        'student',
     ];
 
     public static function manageableRolesFor(User $admin): array
     {
-        return $admin->isFacultyAdmin()
-            ? self::FACULTY_MANAGEABLE_ROLES
-            : self::FACULTY_MANAGEABLE_ROLES;
+        return self::FACULTY_MANAGEABLE_ROLES;
     }
 
     public function index(Request $request): JsonResponse
@@ -35,18 +35,20 @@ class UserAdminController extends Controller
         $query = User::query();
 
         if ($admin->isFacultyAdmin()) {
-            $userIds = $this->facultyUserIds($this->requireFacultyId($admin));
-            $query->whereIn('id', $userIds);
+            $query->where('faculty_id', $this->requireFacultyId($admin))
+                  ->whereIn('role', self::FACULTY_MANAGEABLE_ROLES);
         }
 
         if ($request->filled('role')) {
             $query->where('role', $request->string('role'));
         }
 
-        $users = $query->orderBy('name')->paginate(50);
+        $users = $query
+            ->orderBy('name')
+            ->paginate(50);
 
         return response()->json([
-            'data' => $users->map(fn ($u) => $this->fmt($u)),
+            'data' => $users->map(fn($u) => $this->fmt($u)),
             'meta' => [
                 'total'        => $users->total(),
                 'current_page' => $users->currentPage(),
@@ -59,37 +61,59 @@ class UserAdminController extends Controller
     {
         $this->assertUserInFaculty($user, $request->user());
 
-        return response()->json(['user' => $this->fmt($user)]);
+        return response()->json([
+            'user' => $this->fmt($user),
+        ]);
     }
 
     public function store(StoreUserRequest $request): JsonResponse
     {
+        $admin = $request->user();
         $validated = $request->validated();
 
         $user = User::create([
-            'tenant_id' => TenantContext::require()->id,
-            'name'      => $validated['name'],
-            'email'     => $validated['email'],
-            'role'      => $validated['role'],
-            'password'  => Hash::make($validated['password']),
+            'tenant_id'  => TenantContext::require()->id,
+            'faculty_id' => $admin->isFacultyAdmin()
+                ? $this->requireFacultyId($admin)
+                : null,
+            'name'       => $validated['name'],
+            'email'      => $validated['email'],
+            'role'       => $validated['role'],
+            'password'   => Hash::make($validated['password']),
         ]);
 
-        return response()->json(['user' => $this->fmt($user)], 201);
+        return response()->json([
+            'user' => $this->fmt($user),
+        ], 201);
     }
 
-    public function updateRole(UpdateUserRoleRequest $request, User $user): JsonResponse
-    {
+    public function updateRole(
+        UpdateUserRoleRequest $request,
+        User $user
+    ): JsonResponse {
         $admin = $request->user();
+
         $this->assertUserInFaculty($user, $admin);
 
         $validated = $request->validated();
 
-        $currentRole = $user->role instanceof Role ? $user->role->value : $user->role;
-        if (in_array($currentRole, ['platform_admin', 'university_admin', 'faculty_admin'], true)) {
-            return response()->json(['message' => 'Cannot modify administrative accounts.'], 403);
+        $currentRole = $user->role instanceof Role
+            ? $user->role->value
+            : $user->role;
+
+        if (in_array($currentRole, [
+            'platform_admin',
+            'university_admin',
+            'faculty_admin',
+        ], true)) {
+            return response()->json([
+                'message' => 'Cannot modify administrative accounts.',
+            ], 403);
         }
 
-        $user->update(['role' => $validated['role']]);
+        $user->update([
+            'role' => $validated['role'],
+        ]);
 
         return response()->json([
             'message' => "Role updated to {$validated['role']}.",
@@ -99,13 +123,16 @@ class UserAdminController extends Controller
 
     private function fmt(User $u): array
     {
-        $role = $u->role instanceof Role ? $u->role->value : $u->role;
+        $role = $u->role instanceof Role
+            ? $u->role->value
+            : $u->role;
 
         return [
             'id'         => $u->id,
             'name'       => $u->name,
             'email'      => $u->email,
             'role'       => $role,
+            'faculty_id' => $u->faculty_id,
             'tenant_id'  => $u->tenant_id,
             'created_at' => $u->created_at,
         ];

@@ -19,7 +19,7 @@ import {
 import { useLocale } from '@/i18n/LocaleContext';
 
 export function CoursesPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [deptFilter, setDeptFilter] = useState<number | ''>('');
   const [showForm, setShowForm] = useState(false);
 
@@ -53,7 +53,7 @@ export function CoursesPage() {
         <option value="">{t('allDepartments')}</option>
         {(deptsQuery.data?.departments ?? []).map((d) => (
           <option key={d.id} value={d.id}>
-            {d.code} — {d.name_en}
+            {d.code} — {locale === 'ar' && d.name_ar ? d.name_ar : d.name_en}
           </option>
         ))}
       </AdminSelect>
@@ -76,17 +76,20 @@ export function CoursesPage() {
           <AdminTable
             headers={[t('code'), t('titleEn'), t('creditHours'), t('navSections'), t('actions')]}
           >
-            {(data?.courses ?? []).map((c) => (
-              <tr key={c.id}>
-                <td className="px-4 py-3 font-mono">{c.code}</td>
-                <td className="px-4 py-3">{c.title_en}</td>
-                <td className="px-4 py-3">{c.credit_hours}</td>
-                <td className="px-4 py-3 text-ink/60">{c.sections_count ?? 0}</td>
-                <td className="px-4 py-3">
-                  <DeleteCourseButton id={c.id} />
-                </td>
-              </tr>
-            ))}
+            {(data?.courses ?? []).map((c) => {
+              const displayTitle = locale === 'ar' && c.title_ar ? c.title_ar : c.title_en;
+              return (
+                <tr key={c.id}>
+                  <td className="px-4 py-3 font-mono">{c.code}</td>
+                  <td className="px-4 py-3">{displayTitle}</td>
+                  <td className="px-4 py-3">{c.credit_hours}</td>
+                  <td className="px-4 py-3 text-ink/60">{c.sections_count ?? 0}</td>
+                  <td className="px-4 py-3">
+                    <DeleteCourseButton id={c.id} />
+                  </td>
+                </tr>
+              );
+            })}
           </AdminTable>
         </AdminPanel>
       </AsyncPanel>
@@ -133,6 +136,7 @@ function CreateForm({
   const [departmentId, setDepartmentId] = useState(departments[0]?.id ?? 0);
   const [code, setCode] = useState('');
   const [titleEn, setTitleEn] = useState('');
+  const [titleAr, setTitleAr] = useState('');
   const [credits, setCredits] = useState('3');
   const [prereqIds, setPrereqIds] = useState('');
   const [err, setErr] = useState<Error | null>(null);
@@ -143,6 +147,7 @@ function CreateForm({
         department_id: departmentId,
         code,
         title_en: titleEn,
+        title_ar: titleAr || undefined,
         credit_hours: Number(credits),
         prerequisites: prereqIds
           ? prereqIds.split(',').map((s) => Number(s.trim())).filter(Boolean)
@@ -167,6 +172,7 @@ function CreateForm({
       <div className="flex flex-wrap gap-3">
         <AdminInput placeholder={t('code')} value={code} onChange={(e) => setCode(e.target.value)} />
         <AdminInput placeholder={t('titleEn')} value={titleEn} onChange={(e) => setTitleEn(e.target.value)} />
+        <AdminInput placeholder={t('titleAr')} value={titleAr} onChange={(e) => setTitleAr(e.target.value)} />
         <AdminInput type="number" min={1} max={12} value={credits} onChange={(e) => setCredits(e.target.value)} className="w-20" />
       </div>
       <AdminInput

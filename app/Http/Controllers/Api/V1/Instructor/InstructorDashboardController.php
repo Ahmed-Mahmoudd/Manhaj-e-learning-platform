@@ -26,7 +26,10 @@ class InstructorDashboardController extends Controller
         $instructor = $request->user();
 
         $sections = Section::with(['course', 'term'])
-            ->where('instructor_id', $instructor->id)
+            ->where(function ($query) use ($instructor) {
+                $query->where('instructor_id', $instructor->id)
+                    ->orWhereHas('teachingAssistants', fn($q) => $q->where('user_id', $instructor->id));
+            })
             ->where('is_active', true)
             ->get();
 

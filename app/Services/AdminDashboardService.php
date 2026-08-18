@@ -24,7 +24,7 @@ class AdminDashboardService
 
         $faculties = Faculty::query()
             ->withCount('departments')
-            ->get(['id', 'name_en', 'code']);
+            ->get(['id', 'name_en', 'name_ar', 'code']);
 
         $facultySummaries = $faculties->map(function (Faculty $faculty) {
             $departmentIds = Department::query()
@@ -52,6 +52,7 @@ class AdminDashboardService
             return [
                 'id'                => $faculty->id,
                 'name_en'           => $faculty->name_en,
+                'name_ar'           => $faculty->name_ar,
                 'code'              => $faculty->code,
                 'departments_count' => $faculty->departments_count,
                 'programmes_count'  => $programmeCount,
@@ -116,6 +117,7 @@ class AdminDashboardService
             'faculty' => [
                 'id'      => $faculty->id,
                 'name_en' => $faculty->name_en,
+                'name_ar' => $faculty->name_ar,
                 'code'    => $faculty->code,
             ],
             'students_count'        => $studentCount,

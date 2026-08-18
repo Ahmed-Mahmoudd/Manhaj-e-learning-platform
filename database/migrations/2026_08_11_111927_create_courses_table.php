@@ -12,15 +12,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->foreignId('department_id')->constrained('departments')->cascadeOnDelete();
-            $table->string('code', 20);           // e.g. "CS301"
+            $table->string('code', 20);
             $table->string('title_en');
-            $table->string('title_ar');
+            $table->string('title_ar')->nullable();
             $table->unsignedTinyInteger('credit_hours')->default(3);
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->unique(['tenant_id', 'code']); // code unique per tenant
+            $table->unique(['tenant_id', 'code']);
             $table->index('tenant_id');
         });
     }

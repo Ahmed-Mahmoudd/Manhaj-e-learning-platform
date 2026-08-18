@@ -112,6 +112,10 @@ class GradeController extends Controller
     {
         $this->assertOwns($item->section, $request->user());
 
+        if (! $request->user()->isInstructor() && ! $request->user()->isPlatformAdmin()) {
+            return response()->json(['message' => 'Only instructors can publish grades.'], 403);
+        }
+
         $count = $this->gradeService->publishGradeItem($item);
 
         return response()->json([

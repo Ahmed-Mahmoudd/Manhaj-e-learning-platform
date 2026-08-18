@@ -12,6 +12,7 @@ import {
 import { AsyncPanel } from '@/components/AsyncPanel';
 import { BackLink } from '@/components/BackLink';
 import { InstructorInvalidSection, useInstructorSectionId } from '@/hooks/useInstructorSectionId';
+import { useAuth } from '@/auth/AuthContext';
 import { useLocale } from '@/i18n/LocaleContext';
 import { apiErrorMessage } from '@/utils/apiError';
 import { parseRouteId } from '@/utils/routeParams';
@@ -106,6 +107,9 @@ export function GradeItemGradesPage() {
     },
   });
 
+  const { user } = useAuth();
+  const canPublish = user?.role === 'instructor' || user?.role === 'platform_admin';
+
   if (sid === null || iid === null) return <InstructorInvalidSection />;
 
   return (
@@ -127,7 +131,7 @@ export function GradeItemGradesPage() {
                   {t('maxScore', { score: gradeItem.max_score })}
                 </p>
               </div>
-              {!isPublished && (
+              {!isPublished && canPublish && (
                 <button
                   type="button"
                   disabled={publishMutation.isPending || rows.every((r) => !r.saved)}
@@ -148,7 +152,7 @@ export function GradeItemGradesPage() {
               </p>
             )}
 
-            {!isPublished && (
+            {!isPublished && canPublish && (
               <p className="text-xs text-ink/50">{t('publishGradesHint')}</p>
             )}
 
