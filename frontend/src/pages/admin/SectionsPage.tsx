@@ -10,7 +10,6 @@ import {
   fetchTerms,
 } from '@/api/admin';
 import { AsyncPanel } from '@/components/AsyncPanel';
-import { StatChip } from '@/components/StatChip';
 import {
   AdminButton,
   AdminInput,
@@ -30,15 +29,17 @@ export function SectionsPage() {
     queryFn: () => fetchAdminSections(),
   });
 
+  const sections = data?.sections ?? [];
+
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-8">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-ink">{t('adminSections')}</h1>
-          <p className="mt-1 text-sm text-ink/60">{t('adminSectionsSubtitle')}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t('adminSections')}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t('adminSectionsSubtitle')}</p>
         </div>
         <AdminButton variant="primary" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? t('cancel') : t('addNew')}
+          {showForm ? t('cancel') : `+ ${t('addNew')}`}
         </AdminButton>
       </header>
 
@@ -47,7 +48,7 @@ export function SectionsPage() {
       <AsyncPanel
         isLoading={isLoading}
         error={error}
-        isEmpty={!isLoading && !error && (data?.sections.length ?? 0) === 0}
+        isEmpty={!isLoading && !error && sections.length === 0}
         emptyMessage={t('noSectionsAdmin')}
       >
         <AdminPanel>
@@ -62,7 +63,7 @@ export function SectionsPage() {
               t('actions'),
             ]}
           >
-            {(data?.sections ?? []).map((s) => (
+            {sections.map((s) => (
               <SectionRow key={s.id} section={s} />
             ))}
           </AdminTable>
@@ -96,27 +97,42 @@ function SectionRow({
   });
 
   return (
-    <tr>
-      <td className="px-4 py-3 font-mono">{section.course?.code ?? '—'}</td>
-      <td className="px-4 py-3">§{section.section_number}</td>
-      <td className="px-4 py-3 text-ink/60">{section.term?.name ?? '—'}</td>
-      <td className="px-4 py-3">{section.instructor?.name ?? '—'}</td>
-      <td className="px-4 py-3">{section.capacity}</td>
-      <td className="px-4 py-3">
+    <tr className="hover:bg-amber-50/20 transition-colors">
+      <td className="px-5 py-4">
+        <span className="font-mono text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/60 shadow-xs">
+          {section.course?.code ?? '—'}
+        </span>
+      </td>
+      <td className="px-5 py-4">
+        <span className="font-mono text-xs font-semibold rounded bg-slate-100 px-2 py-0.5 text-slate-700">
+          §{section.section_number}
+        </span>
+      </td>
+      <td className="px-5 py-4 font-medium text-slate-700">{section.term?.name ?? '—'}</td>
+      <td className="px-5 py-4 font-semibold text-slate-900">{section.instructor?.name ?? '—'}</td>
+      <td className="px-5 py-4 font-mono font-bold text-slate-700">{section.capacity}</td>
+      <td className="px-5 py-4">
         {section.is_active ? (
-          <StatChip variant="sage">{t('active')}</StatChip>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-0.5 text-xs font-semibold text-emerald-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            {t('active')}
+          </span>
         ) : (
-          <StatChip>{t('inactive')}</StatChip>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-3 py-0.5 text-xs font-medium text-slate-600">
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+            {t('inactive')}
+          </span>
         )}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-5 py-4">
         <AdminButton
           variant="danger"
+          disabled={deleteMutation.isPending}
           onClick={() => {
             if (window.confirm(t('confirmDelete'))) deleteMutation.mutate();
           }}
         >
-          {t('delete')}
+          🗑️ {t('delete')}
         </AdminButton>
         <FormError error={err} />
       </td>
@@ -175,9 +191,13 @@ function CreateForm({ onDone }: { onDone: () => void }) {
   });
 
   return (
-    <AdminPanel className="space-y-3 p-5">
+    <div className="rounded-2xl border border-amber-500/30 bg-white p-6 shadow-md shadow-amber-500/5 space-y-4">
+      <div className="border-b border-slate-100 pb-3">
+        <h2 className="text-base font-bold text-slate-900">{t('addSection')}</h2>
+      </div>
+
       {!canCreate && (
-        <p className="text-sm text-ink/60">
+        <p className="text-xs text-slate-500">
           {courses.length === 0
             ? t('formNoCoursesAvailable')
             : terms.length === 0
@@ -185,55 +205,81 @@ function CreateForm({ onDone }: { onDone: () => void }) {
               : t('formNoInstructorsAvailable')}
         </p>
       )}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <AdminSelect value={courseId || courses[0]?.id} onChange={(e) => setCourseId(Number(e.target.value))}>
-          {courses.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.code}
-            </option>
-          ))}
-        </AdminSelect>
-        <AdminSelect value={termId || terms[0]?.id} onChange={(e) => setTermId(Number(e.target.value))}>
-          {terms.map((term) => (
-            <option key={term.id} value={term.id}>
-              {term.name}
-            </option>
-          ))}
-        </AdminSelect>
-        <AdminSelect
-          value={instructorId || instructors[0]?.id}
-          onChange={(e) => setInstructorId(Number(e.target.value))}
-        >
-          {instructors.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </AdminSelect>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="space-y-1">
+          <label className="block text-xs font-semibold text-slate-600">{t('course')}</label>
+          <AdminSelect value={courseId || courses[0]?.id} onChange={(e) => setCourseId(Number(e.target.value))} className="w-full">
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.code}
+              </option>
+            ))}
+          </AdminSelect>
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-xs font-semibold text-slate-600">{t('termName')}</label>
+          <AdminSelect value={termId || terms[0]?.id} onChange={(e) => setTermId(Number(e.target.value))} className="w-full">
+            {terms.map((term) => (
+              <option key={term.id} value={term.id}>
+                {term.name}
+              </option>
+            ))}
+          </AdminSelect>
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-xs font-semibold text-slate-600">{t('instructorLabel')}</label>
+          <AdminSelect
+            value={instructorId || instructors[0]?.id}
+            onChange={(e) => setInstructorId(Number(e.target.value))}
+            className="w-full"
+          >
+            {instructors.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </AdminSelect>
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-xs font-semibold text-slate-600">{t('sectionNumber')}</label>
+          <AdminInput
+            placeholder={t('sectionNumber')}
+            value={sectionNumber}
+            onChange={(e) => setSectionNumber(e.target.value)}
+            className="w-full"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-xs font-semibold text-slate-600">{t('capacity')}</label>
+          <AdminInput
+            type="number"
+            min={1}
+            value={capacity}
+            onChange={(e) => setCapacity(e.target.value)}
+            className="w-full"
+          />
+        </div>
       </div>
-      <div className="flex flex-wrap gap-3">
-        <AdminInput
-          placeholder={t('sectionNumber')}
-          value={sectionNumber}
-          onChange={(e) => setSectionNumber(e.target.value)}
-          className="w-24"
-        />
-        <AdminInput
-          type="number"
-          min={1}
-          value={capacity}
-          onChange={(e) => setCapacity(e.target.value)}
-          className="w-24"
-        />
-      </div>
+
       <FormError error={err} />
-      <AdminButton
-        variant="primary"
-        onClick={() => mutation.mutate()}
-        disabled={mutation.isPending || !canCreate}
-      >
-        {t('create')}
-      </AdminButton>
-    </AdminPanel>
+
+      <div className="flex items-center gap-3 pt-2">
+        <AdminButton
+          variant="primary"
+          onClick={() => mutation.mutate()}
+          disabled={mutation.isPending || !canCreate}
+        >
+          {mutation.isPending ? t('processing') : t('create')}
+        </AdminButton>
+        <AdminButton variant="ghost" onClick={onDone}>
+          {t('cancel')}
+        </AdminButton>
+      </div>
+    </div>
   );
 }

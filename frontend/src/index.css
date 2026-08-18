@@ -1,28 +1,30 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #16233f;
-  --color-paper: #f4f6f5;
-  --color-brass: #b8863b;
-  --color-brass-hover: #9a7030;
-  --color-sage: #5b8a72;
-  --color-brick: #b4543a;
-  --font-sans: "IBM Plex Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-sans-ar: "IBM Plex Sans Arabic", "IBM Plex Sans", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --color-ink: #0f172a;
+  --color-paper: #f8fafc;
+  --color-brass: #d97706;
+  --color-brass-hover: #b45309;
+  --color-sage: #10b981;
+  --color-brick: #ef4444;
+  --font-sans: "Plus Jakarta Sans", "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans-ar: "Alexandria", "Cairo", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
 }
 
 html {
-  background-color: var(--color-paper);
+  background-color: #f8fafc;
   color-scheme: light;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  color: var(--color-ink);
+  color: #0f172a;
   font-family: var(--font-sans);
-  background-color: var(--color-paper);
+  background: radial-gradient(circle at 50% 0%, rgba(217, 119, 6, 0.04) 0%, transparent 60%),
+              radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
+              #f8fafc;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -35,24 +37,45 @@ html[dir="rtl"] body {
   font-family: var(--font-mono);
 }
 
-/* Card & Surface Polish */
-.card-surface {
-  background-color: #ffffff;
-  border: 1px solid rgba(22, 35, 63, 0.08);
-  border-radius: 0.75rem;
-  box-shadow: 0 1px 3px 0 rgba(22, 35, 63, 0.04);
+/* Glassmorphism & Modern Card Surfaces */
+.glass-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.03), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.card-surface:hover {
-  border-color: rgba(184, 134, 59, 0.35);
-  box-shadow: 0 4px 12px -2px rgba(22, 35, 63, 0.06), 0 2px 4px -2px rgba(22, 35, 63, 0.04);
+.glass-card-hover:hover {
+  border-color: rgba(217, 119, 6, 0.35);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.06), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+  transform: translateY(-1px);
+}
+
+/* Vibrant Gradient Accents */
+.btn-brass {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px -2px rgba(217, 119, 6, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-brass:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  box-shadow: 0 6px 16px -2px rgba(217, 119, 6, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-brass:active {
+  transform: scale(0.98);
 }
 
 @keyframes fade-rise {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -61,6 +84,5 @@ html[dir="rtl"] body {
 }
 
 .animate-fade-rise {
-  animation: fade-rise 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fade-rise 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-

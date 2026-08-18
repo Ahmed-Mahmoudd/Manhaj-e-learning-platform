@@ -41,32 +41,35 @@ export function DepartmentsPage() {
     queryFn: () => fetchDepartments(isFacultyAdmin ? undefined : (facultyFilter || undefined)),
   });
 
-  return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-ink">{t('adminDepartments')}</h1>
-          <p className="mt-1 text-sm text-ink/60">{t('adminDepartmentsSubtitle')}</p>
-        </div>
-        <AdminButton variant="primary" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? t('cancel') : t('addNew')}
-        </AdminButton>
-      </header>
+  const departments = data?.departments ?? [];
 
-      {!isFacultyAdmin && (
-        <AdminSelect
-          value={facultyFilter}
-          onChange={(e) => setFacultyFilter(e.target.value ? Number(e.target.value) : '')}
-          className="max-w-xs"
-        >
-          <option value="">{t('allFaculties')}</option>
-          {(facultiesQuery.data?.faculties ?? []).map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.code} — {f.name_en}
-            </option>
-          ))}
-        </AdminSelect>
-      )}
+  return (
+    <div className="space-y-8">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t('adminDepartments')}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t('adminDepartmentsSubtitle')}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {!isFacultyAdmin && (
+            <AdminSelect
+              value={facultyFilter}
+              onChange={(e) => setFacultyFilter(e.target.value ? Number(e.target.value) : '')}
+              className="min-w-[14rem]"
+            >
+              <option value="">{t('allFaculties')}</option>
+              {(facultiesQuery.data?.faculties ?? []).map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.code} — {f.name_en}
+                </option>
+              ))}
+            </AdminSelect>
+          )}
+          <AdminButton variant="primary" onClick={() => setShowForm((v) => !v)}>
+            {showForm ? t('cancel') : `+ ${t('addNew')}`}
+          </AdminButton>
+        </div>
+      </header>
 
       {showForm && (
         <CreateForm
@@ -79,14 +82,14 @@ export function DepartmentsPage() {
       <AsyncPanel
         isLoading={isLoading}
         error={error}
-        isEmpty={!isLoading && !error && (data?.departments.length ?? 0) === 0}
+        isEmpty={!isLoading && !error && departments.length === 0}
         emptyMessage={t('noDepartments')}
       >
         <AdminPanel>
           <AdminTable
             headers={[t('code'), t('nameEn'), t('faculty'), t('actions')]}
           >
-            {(data?.departments ?? []).map((d) => (
+            {departments.map((d) => (
               <DeptRow key={d.id} dept={d} />
             ))}
           </AdminTable>
@@ -121,17 +124,17 @@ function DeptRow({ dept }: { dept: Department }) {
 
   if (editing) {
     return (
-      <tr>
+      <tr className="bg-amber-50/30">
         <td className={adminTableCell}>
           <AdminInput value={code} onChange={(e) => setCode(e.target.value)} className="w-full" />
         </td>
         <td className={adminTableCell}>
           <AdminInput value={nameEn} onChange={(e) => setNameEn(e.target.value)} className="w-full" />
         </td>
-        <td className={`${adminTableCell} text-ink/60`}>{dept.faculty?.code ?? '—'}</td>
+        <td className={`${adminTableCell} text-slate-500 font-mono`}>{dept.faculty?.code ?? '—'}</td>
         <td className={adminTableCell}>
           <div className="flex flex-wrap gap-2">
-            <AdminButton variant="primary" onClick={() => saveMutation.mutate()}>
+            <AdminButton variant="primary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
               {t('save')}
             </AdminButton>
             <AdminButton variant="ghost" onClick={() => setEditing(false)}>
@@ -147,22 +150,31 @@ function DeptRow({ dept }: { dept: Department }) {
   const displayName = locale === 'ar' && dept.name_ar ? dept.name_ar : dept.name_en;
 
   return (
-    <tr>
-      <td className={`${adminTableCell} font-mono`}>{dept.code}</td>
-      <td className={adminTableCell}>{displayName}</td>
-      <td className={`${adminTableCell} text-ink/60`}>{dept.faculty?.code ?? '—'}</td>
+    <tr className="hover:bg-amber-50/20 transition-colors">
+      <td className={adminTableCell}>
+        <span className="font-mono text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/60 shadow-xs">
+          {dept.code}
+        </span>
+      </td>
+      <td className={`${adminTableCell} font-bold text-slate-900`}>{displayName}</td>
+      <td className={`${adminTableCell} font-mono text-xs text-slate-600`}>
+        <span className="rounded bg-slate-100 px-2 py-0.5 font-semibold">
+          {dept.faculty?.code ?? '—'}
+        </span>
+      </td>
       <td className={adminTableCell}>
         <div className="flex flex-wrap gap-2">
           <AdminButton variant="ghost" onClick={() => setEditing(true)}>
-            {t('edit')}
+            ✏️ {t('edit')}
           </AdminButton>
           <AdminButton
             variant="danger"
+            disabled={deleteMutation.isPending}
             onClick={() => {
               if (window.confirm(t('confirmDelete'))) deleteMutation.mutate();
             }}
           >
-            {t('delete')}
+            🗑️ {t('delete')}
           </AdminButton>
         </div>
         <FormError error={err} />
@@ -204,25 +216,48 @@ function CreateForm({
   });
 
   return (
-    <AdminPanel className="space-y-3 p-5">
-      {!isFacultyAdmin && faculties.length > 0 && (
-        <AdminSelect value={facultyId} onChange={(e) => setFacultyId(Number(e.target.value))}>
-          {faculties.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.code}
-            </option>
-          ))}
-        </AdminSelect>
-      )}
-      <div className="flex flex-wrap gap-3">
-        <AdminInput placeholder={t('code')} value={code} onChange={(e) => setCode(e.target.value)} />
-        <AdminInput placeholder={t('nameEn')} value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
-        <AdminInput placeholder={t('nameAr')} value={nameAr} onChange={(e) => setNameAr(e.target.value)} />
+    <div className="rounded-2xl border border-amber-500/30 bg-white p-6 shadow-md shadow-amber-500/5 space-y-4">
+      <div className="border-b border-slate-100 pb-3">
+        <h2 className="text-base font-bold text-slate-900">{t('addDepartment')}</h2>
       </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {!isFacultyAdmin && faculties.length > 0 && (
+          <div className="space-y-1">
+            <label className="block text-xs font-semibold text-slate-600">{t('faculty')}</label>
+            <AdminSelect value={facultyId} onChange={(e) => setFacultyId(Number(e.target.value))} className="w-full">
+              {faculties.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.code} — {f.name_en}
+                </option>
+              ))}
+            </AdminSelect>
+          </div>
+        )}
+        <div className="space-y-1">
+          <label className="block text-xs font-semibold text-slate-600">{t('code')}</label>
+          <AdminInput placeholder={t('code')} value={code} onChange={(e) => setCode(e.target.value)} className="w-full" />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-xs font-semibold text-slate-600">{t('nameEn')}</label>
+          <AdminInput placeholder={t('nameEn')} value={nameEn} onChange={(e) => setNameEn(e.target.value)} className="w-full" />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-xs font-semibold text-slate-600">{t('nameAr')}</label>
+          <AdminInput placeholder={t('nameAr')} value={nameAr} onChange={(e) => setNameAr(e.target.value)} className="w-full" />
+        </div>
+      </div>
+
       <FormError error={err} />
-      <AdminButton variant="primary" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-        {t('create')}
-      </AdminButton>
-    </AdminPanel>
+
+      <div className="flex items-center gap-3 pt-2">
+        <AdminButton variant="primary" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+          {mutation.isPending ? t('processing') : t('create')}
+        </AdminButton>
+        <AdminButton variant="ghost" onClick={onDone}>
+          {t('cancel')}
+        </AdminButton>
+      </div>
+    </div>
   );
 }
