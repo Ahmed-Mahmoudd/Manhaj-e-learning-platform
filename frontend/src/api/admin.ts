@@ -1,17 +1,20 @@
 import { apiRequest } from "@/api/client";
+import { getToken, getTenantId } from "@/auth/storage";
 import type {
     AcademicTerm,
     AdminCourse,
     AdminSection,
     AdminUser,
     Department,
+    DepartmentAnalyticsResponse,
     Faculty,
+    GradeAnalyticsResponse,
     PaginatedMeta,
     Programme,
 } from "@/types/admin";
 
 /* =========================
- * Dashboard
+ * Dashboard & Analytics
  * ========================= */
 
 export type UniversityDashboardStats = {
@@ -61,11 +64,53 @@ export type FacultyDashboardStats = {
     } | null;
 };
 
+export type AdminDashboardResponse =
+    | { scope: "university"; stats: UniversityDashboardStats }
+    | { scope: "faculty"; stats: FacultyDashboardStats };
+
 export function fetchAdminDashboard() {
-    return apiRequest<{
-        scope: "university" | "faculty";
-        stats: UniversityDashboardStats | FacultyDashboardStats;
-    }>("/admin/dashboard");
+    return apiRequest<AdminDashboardResponse>("/admin/dashboard");
+}
+
+export function fetchDepartmentAnalytics(facultyId?: number) {
+    const query = facultyId ? `?faculty_id=${facultyId}` : "";
+    return apiRequest<DepartmentAnalyticsResponse>(`/admin/analytics/departments${query}`);
+}
+
+export function fetchGradeAnalytics(facultyId?: number) {
+    const query = facultyId ? `?faculty_id=${facultyId}` : "";
+    return apiRequest<GradeAnalyticsResponse>(`/admin/analytics/grades${query}`);
+}
+
+export async function downloadAdminReport(type: string, facultyId?: number) {
+    const token = getToken();
+    const tenantId = getTenantId();
+    const params = new URLSearchParams({ type });
+    if (facultyId != null) params.set("faculty_id", String(facultyId));
+
+    const API_ROOT = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+    const BASE = API_ROOT ? `${API_ROOT}/api/v1` : "/api/v1";
+
+    const response = await fetch(`${BASE}/admin/reports/export?${params.toString()}`, {
+        headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+            "X-Tenant-ID": tenantId ? String(tenantId) : "",
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to export report");
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `manhaj-${type}-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
 }
 
 /* =========================
@@ -370,6 +415,12 @@ export const adminKeys = {
     all: ["admin"] as const,
 
     dashboard: () => [...adminKeys.all, "dashboard"] as const,
+
+    departmentAnalytics: (facultyId?: number) =>
+        [...adminKeys.all, "analytics", "departments", facultyId ?? "all"] as const,
+
+    gradeAnalytics: (facultyId?: number) =>
+        [...adminKeys.all, "analytics", "grades", facultyId ?? "all"] as const,
 
     faculties: () => [...adminKeys.all, "faculties"] as const,
 

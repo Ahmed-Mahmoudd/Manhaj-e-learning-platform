@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/auth/AuthContext";
 import { useLocale } from "@/i18n/LocaleContext";
 import {
+    downloadAdminReport,
     fetchAdminDashboard,
+    fetchDepartmentAnalytics,
+    fetchGradeAnalytics,
     type FacultyDashboardStats,
     type UniversityDashboardStats,
 } from "@/api/admin";
@@ -287,6 +290,11 @@ function UniversityDashboard({
                     </div>
                 </div>
             </section>
+
+            {/* Department Analytics & Grade Performance */}
+            <DepartmentAnalyticsSection />
+            <GradeAnalyticsSection />
+            <ReportsExportSection />
         </div>
     );
 }
@@ -372,27 +380,197 @@ function FacultyDashboard({
                 </div>
             </section>
 
-            {/* Faculty Overview */}
-            <section>
-                <h2 className="mb-3 text-lg font-semibold text-ink">
-                    {t("facultyOverview")}
-                </h2>
-
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <InfoCard label={t("faculty")} value={facultyName} />
-
-                    <InfoCard
-                        label={t("facultyCode")}
-                        value={stats.faculty.code}
-                    />
-
-                    <InfoCard
-                        label={t("activeSections")}
-                        value={stats.active_sections_count}
-                    />
-                </div>
-            </section>
+            {/* Department Analytics & Grade Performance */}
+            <DepartmentAnalyticsSection facultyId={stats.faculty.id} />
+            <GradeAnalyticsSection facultyId={stats.faculty.id} />
+            <ReportsExportSection facultyId={stats.faculty.id} />
         </div>
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Department & Grade Analytics Components                                    */
+/* -------------------------------------------------------------------------- */
+
+function DepartmentAnalyticsSection({ facultyId }: { facultyId?: number }) {
+    const { t, locale } = useLocale();
+    const [departments, setDepartments] = useState<import("@/types/admin").DepartmentAnalyticsItem[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let active = true;
+        async function load() {
+            try {
+                const res = await fetchDepartmentAnalytics(facultyId);
+                if (active) setDepartments(res.departments);
+            } catch {
+                // Ignore silent analytics error
+            } finally {
+                if (active) setLoading(false);
+            }
+        }
+        load();
+        return () => { active = false; };
+    }, [facultyId]);
+
+    if (loading || departments.length === 0) return null;
+
+    return (
+        <section className="space-y-3">
+            <div>
+                <h2 className="text-lg font-semibold text-ink">{t("departmentAnalytics")}</h2>
+                <p className="mt-0.5 text-xs text-ink/60">{t("departmentAnalyticsSubtitle")}</p>
+            </div>
+
+            <div className="overflow-x-auto border border-ink/10 bg-white rounded">
+                <table className="w-full text-start text-sm">
+                    <thead className="border-b border-ink/10 bg-paper text-xs uppercase text-ink/50">
+                        <tr>
+                            <th className="px-5 py-3 font-medium text-start">{t("department")}</th>
+                            <th className="px-4 py-3 font-medium text-center">{t("programmes")}</th>
+                            <th className="px-4 py-3 font-medium text-center">{t("courses")}</th>
+                            <th className="px-4 py-3 font-medium text-center">{t("sections")}</th>
+                            <th className="px-4 py-3 font-medium text-center">{t("capacity")}</th>
+                            <th className="px-4 py-3 font-medium text-center">{t("enrolled")}</th>
+                            <th className="px-5 py-3 font-medium text-start">{t("fillRate")}</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-ink/10">
+                        {departments.map((d) => {
+                            const name = locale === "ar" && d.name_ar ? d.name_ar : d.name_en;
+                            return (
+                                <tr key={d.id} className="hover:bg-paper/40">
+                                    <td className="px-5 py-4">
+                                        <p className="font-medium text-ink">{name}</p>
+                                        <p className="text-xs text-ink/50 font-mono">{d.code}</p>
+                                    </td>
+                                    <td className="px-4 py-4 text-center text-ink/70">{d.programmes_count}</td>
+                                    <td className="px-4 py-4 text-center text-ink/70">{d.courses_count}</td>
+                                    <td className="px-4 py-4 text-center text-ink/70">{d.sections_count}</td>
+                                    <td className="px-4 py-4 text-center text-ink/70">{d.capacity}</td>
+                                    <td className="px-4 py-4 text-center text-ink/70 font-semibold">{d.enrolled_count}</td>
+                                    <td className="px-5 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-1.5 w-16 overflow-hidden rounded bg-ink/10">
+                                                <div
+                                                    className="h-full bg-brass"
+                                                    style={{ width: `${Math.min(100, d.fill_rate_pct)}%` }}
+                                                />
+                                            </div>
+                                            <span className="font-mono text-xs text-ink/70">{d.fill_rate_pct}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    );
+}
+
+function GradeAnalyticsSection({ facultyId }: { facultyId?: number }) {
+    const { t } = useLocale();
+    const [grades, setGrades] = useState<import("@/types/admin").GradeAnalyticsResponse | null>(null);
+
+    useEffect(() => {
+        let active = true;
+        async function load() {
+            try {
+                const res = await fetchGradeAnalytics(facultyId);
+                if (active) setGrades(res);
+            } catch {
+                // Ignore silent analytics error
+            }
+        }
+        load();
+        return () => { active = false; };
+    }, [facultyId]);
+
+    if (!grades || grades.total_grades === 0) return null;
+
+    return (
+        <section className="space-y-4">
+            <div>
+                <h2 className="text-lg font-semibold text-ink">{t("gradeAnalytics")}</h2>
+                <p className="mt-0.5 text-xs text-ink/60">{t("gradeAnalyticsSubtitle")}</p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+                <div className="border border-ink/10 bg-white p-5 rounded">
+                    <p className="text-xs uppercase text-ink/50 font-medium">{t("averageScore")}</p>
+                    <p className="mt-2 text-2xl font-bold text-ink">{grades.average_score_pct}%</p>
+                    <p className="mt-1 text-xs text-ink/50">{grades.published_grade_items} {t("publishedGradeItems")}</p>
+                </div>
+
+                <div className="border border-ink/10 bg-white p-5 rounded">
+                    <p className="text-xs uppercase text-ink/50 font-medium">{t("passingRate")}</p>
+                    <p className="mt-2 text-2xl font-bold text-emerald-700">{grades.passing_rate_pct}%</p>
+                    <p className="mt-1 text-xs text-ink/50">{t("passingScoreThreshold")}</p>
+                </div>
+
+                <div className="border border-ink/10 bg-white p-5 rounded">
+                    <p className="text-xs uppercase text-ink/50 font-medium">{t("totalEvaluations")}</p>
+                    <p className="mt-2 text-2xl font-bold text-ink">{grades.total_grades}</p>
+                    <p className="mt-1 text-xs text-ink/50">{t("individualStudentGrades")}</p>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function ReportsExportSection({ facultyId }: { facultyId?: number }) {
+    const { t } = useLocale();
+    const [exporting, setExporting] = useState<string | null>(null);
+
+    async function handleExport(type: string) {
+        try {
+            setExporting(type);
+            await downloadAdminReport(type, facultyId);
+        } catch {
+            // handle error
+        } finally {
+            setExporting(null);
+        }
+    }
+
+    return (
+        <section className="border border-ink/10 bg-white p-6 rounded space-y-4">
+            <div>
+                <h2 className="text-base font-semibold text-ink">{t("exportReports")}</h2>
+                <p className="mt-0.5 text-xs text-ink/60">{t("exportReportsSubtitle")}</p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+                <button
+                    type="button"
+                    disabled={exporting !== null}
+                    onClick={() => handleExport("departments")}
+                    className="inline-flex items-center gap-2 rounded border border-ink/20 px-3 py-1.5 text-xs font-medium text-ink hover:bg-paper disabled:opacity-50"
+                >
+                    📥 {t("exportDepartmentsCsv")}
+                </button>
+
+                <button
+                    type="button"
+                    disabled={exporting !== null}
+                    onClick={() => handleExport("courses")}
+                    className="inline-flex items-center gap-2 rounded border border-ink/20 px-3 py-1.5 text-xs font-medium text-ink hover:bg-paper disabled:opacity-50"
+                >
+                    📥 {t("exportCoursesCsv")}
+                </button>
+
+                <button
+                    type="button"
+                    disabled={exporting !== null}
+                    onClick={() => handleExport("sections")}
+                    className="inline-flex items-center gap-2 rounded border border-ink/20 px-3 py-1.5 text-xs font-medium text-ink hover:bg-paper disabled:opacity-50"
+                >
+                    📥 {t("exportSectionsCsv")}
+                </button>
+            </div>
+        </section>
     );
 }
 
@@ -412,17 +590,7 @@ function StatCard({ label, value }: { label: string; value: number }) {
     );
 }
 
-function InfoCard({ label, value }: { label: string; value: string | number }) {
-    return (
-        <div className="border border-ink/10 bg-white p-5">
-            <p className="text-sm text-ink/50">{label}</p>
 
-            <p className="mt-2 text-lg font-semibold text-ink">
-                {typeof value === "number" ? value.toLocaleString() : value}
-            </p>
-        </div>
-    );
-}
 
 function formatDate(value: string, locale: "en" | "ar") {
     const date = new Date(value);
@@ -433,3 +601,4 @@ function formatDate(value: string, locale: "en" | "ar") {
 
     return date.toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US");
 }
+

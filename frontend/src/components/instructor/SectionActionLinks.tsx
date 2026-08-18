@@ -22,6 +22,12 @@ export function SectionActionLinks({ sectionId }: { sectionId: number }) {
       <Link to={`${base}/discuss`} className="text-sm text-brass transition hover:text-brass-hover">
         {t('moderateDiscussion')} →
       </Link>
+      <Link
+        to={`${base}/analytics`}
+        className="text-sm text-brass transition hover:text-brass-hover"
+      >
+        {t('sectionAnalytics')} →
+      </Link>
     </div>
   );
 }

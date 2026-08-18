@@ -9,6 +9,8 @@ import type {
   InstructorSectionsResponse,
   PublishGradeItemResponse,
   SectionAnnouncementsResponse,
+  SectionAnalyticsResponse,
+  SectionProgressResponse,
   SectionEnrolmentsResponse,
   SectionGradeItemsResponse,
 } from '@/types/instructor';
@@ -19,6 +21,14 @@ export function fetchInstructorSections() {
 
 export function fetchSectionEnrolments(sectionId: number) {
   return apiRequest<SectionEnrolmentsResponse>(`/instructor/sections/${sectionId}/enrolments`);
+}
+
+export function fetchSectionAnalytics(sectionId: number) {
+  return apiRequest<SectionAnalyticsResponse>(`/instructor/sections/${sectionId}/analytics`);
+}
+
+export function fetchSectionProgress(sectionId: number) {
+  return apiRequest<SectionProgressResponse>(`/instructor/sections/${sectionId}/progress`);
 }
 
 export function fetchSectionGradeItems(sectionId: number) {
@@ -95,6 +105,10 @@ export const instructorKeys = {
   sections: () => [...instructorKeys.all, 'sections'] as const,
   enrolments: (sectionId: number) =>
     [...instructorKeys.all, 'sections', sectionId, 'enrolments'] as const,
+  analytics: (sectionId: number) =>
+    [...instructorKeys.all, 'sections', sectionId, 'analytics'] as const,
+  progress: (sectionId: number) =>
+    [...instructorKeys.all, 'sections', sectionId, 'progress'] as const,
   gradeItems: (sectionId: number) =>
     [...instructorKeys.all, 'sections', sectionId, 'grade-items'] as const,
   itemGrades: (itemId: number) =>
@@ -102,3 +116,4 @@ export const instructorKeys = {
   announcements: (sectionId: number) =>
     [...instructorKeys.all, 'sections', sectionId, 'announcements'] as const,
 };
+

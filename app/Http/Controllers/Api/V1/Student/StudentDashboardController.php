@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Api\V1\Student;
 
 use App\Http\Controllers\Controller;
+use App\Models\Announcement;
 use App\Models\Enrolment;
 use App\Models\Lesson;
+use App\Models\LessonProgress;
+use App\Models\Module;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\LessonProgressService;
@@ -200,6 +203,129 @@ class StudentDashboardController extends Controller
                 'progress_pct'  => $progress->progress_pct,
                 'completed_at'  => $progress->completed_at,
             ],
+        ]);
+    }
+
+    /**
+     * GET /api/v1/student/dashboard/summary
+     *
+     * Returns student dashboard summary with continue-learning recommendation,
+     * enrolled course progress metrics, and recent announcements.
+     */
+    public function summary(Request $request): JsonResponse
+    {
+        $student = $request->user();
+
+        $enrolments = Enrolment::withoutGlobalScope('tenant')
+            ->with(['section.course', 'section.term', 'section.instructor'])
+            ->where('student_id', $student->id)
+            ->where('status', 'enrolled')
+            ->get();
+
+        $enrolledCount = $enrolments->count();
+
+        // Calculate progress for each course
+        $courseProgresses = $enrolments->map(function ($e) use ($student) {
+            $pct = $this->progressService->courseCompletionPct($student, $e->section->course_id);
+            return [
+                'enrolment'    => $e,
+                'progress_pct' => $pct,
+            ];
+        });
+
+        $avgProgress = $enrolledCount > 0
+            ? round($courseProgresses->avg('progress_pct'), 1)
+            : 0.0;
+
+        // Find "Continue Learning" lesson:
+        // Priority 1: Most recently accessed in-progress lesson (<100%)
+        $recentProgress = LessonProgress::withoutGlobalScope('tenant')
+            ->where('user_id', $student->id)
+            ->where('progress_pct', '<', 100)
+            ->whereHas('lesson.module.course.sections.enrolments', function ($q) use ($student) {
+                $q->where('student_id', $student->id)->where('status', 'enrolled');
+            })
+            ->with(['lesson.module.course'])
+            ->orderByDesc('last_accessed_at')
+            ->first();
+
+        $continueLesson = null;
+        if ($recentProgress && $recentProgress->lesson) {
+            $lesson = $recentProgress->lesson;
+            $enrolment = $enrolments->firstWhere('section.course_id', $lesson->module->course_id);
+            if ($enrolment) {
+                $continueLesson = [
+                    'lesson_id'    => $lesson->id,
+                    'title'        => $lesson->title,
+                    'type'         => $lesson->type,
+                    'progress_pct' => $recentProgress->progress_pct,
+                    'module_title' => $lesson->module->title,
+                    'course_id'    => $lesson->module->course->id,
+                    'course_code'  => $lesson->module->course->code,
+                    'course_title' => $lesson->module->course->title_en,
+                    'section_id'   => $enrolment->section_id,
+                ];
+            }
+        }
+
+        // Priority 2: If no recent in-progress lesson, pick the first published lesson in the first incomplete course
+        if (! $continueLesson && $enrolments->isNotEmpty()) {
+            foreach ($enrolments as $enrolment) {
+                $course = $enrolment->section->course;
+                $firstLesson = Lesson::withoutGlobalScope('tenant')
+                    ->whereHas('module', fn($q) => $q->where('course_id', $course->id)->where('is_published', true))
+                    ->where('is_published', true)
+                    ->orderBy('order')
+                    ->first();
+
+                if ($firstLesson) {
+                    $prog = LessonProgress::withoutGlobalScope('tenant')
+                        ->where('user_id', $student->id)
+                        ->where('lesson_id', $firstLesson->id)
+                        ->first();
+
+                    if (! $prog || $prog->progress_pct < 100) {
+                        $continueLesson = [
+                            'lesson_id'    => $firstLesson->id,
+                            'title'        => $firstLesson->title,
+                            'type'         => $firstLesson->type,
+                            'progress_pct' => $prog?->progress_pct ?? 0,
+                            'module_title' => $firstLesson->module?->title,
+                            'course_id'    => $course->id,
+                            'course_code'  => $course->code,
+                            'course_title' => $course->title_en,
+                            'section_id'   => $enrolment->section_id,
+                        ];
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Recent announcements
+        $sectionIds = $enrolments->pluck('section_id');
+        $announcements = Announcement::query()
+            ->whereIn('section_id', $sectionIds)
+            ->where('is_published', true)
+            ->with(['section.course', 'author'])
+            ->orderByDesc('published_at')
+            ->limit(5)
+            ->get()
+            ->map(fn($a) => [
+                'id'           => $a->id,
+                'title'        => $a->title,
+                'body'         => $a->body,
+                'is_urgent'    => (bool) $a->is_urgent,
+                'published_at' => $a->published_at?->toIso8601String(),
+                'course_code'  => $a->section?->course?->code,
+                'course_title' => $a->section?->course?->title_en,
+            ]);
+
+        return response()->json([
+            'enrolled_courses_count' => $enrolledCount,
+            'average_progress_pct'   => $avgProgress,
+            'continue_learning'      => $continueLesson,
+            'recent_announcements'   => $announcements,
         ]);
     }
 

@@ -75,3 +75,57 @@ export interface UpdateProgressResponse {
     completed_at: string | null;
   };
 }
+
+export interface ContinueLearningItem {
+  lesson_id: number;
+  title: string;
+  type: LessonType;
+  progress_pct: number;
+  module_title: string;
+  course_id: number;
+  course_code: string;
+  course_title: string;
+  section_id: number;
+}
+
+export interface RecentAnnouncementItem {
+  id: number;
+  title: string;
+  body: string;
+  is_urgent: boolean;
+  published_at: string | null;
+  course_code?: string;
+  course_title?: string;
+}
+
+export interface DashboardSummaryResponse {
+  enrolled_courses_count: number;
+  average_progress_pct: number;
+  continue_learning: ContinueLearningItem | null;
+  recent_announcements: RecentAnnouncementItem[];
+}
+
+export interface RecommendationItem {
+  id: number;
+  score: number;
+  reason: string;
+  source: string;
+  course: {
+    id: number;
+    code: string;
+    title_en: string;
+    title_ar: string | null;
+    description: string | null;
+    credit_hours: number;
+    department: {
+      id: number;
+      name_en: string;
+      name_ar: string;
+    } | null;
+  };
+}
+
+export interface RecommendationsResponse {
+  recommendations: RecommendationItem[];
+}
+

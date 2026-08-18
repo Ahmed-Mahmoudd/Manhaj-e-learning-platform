@@ -36,9 +36,15 @@ class RecommendationController extends Controller
                     'id'           => $r->course->id,
                     'code'         => $r->course->code,
                     'title_en'     => $r->course->title_en,
+                    'title_ar'     => $r->course->title_ar,
+                    'description'  => $r->course->description,
                     'credit_hours' => $r->course->credit_hours,
                     'department'   => $r->course->department
-                        ? ['id' => $r->course->department->id, 'name_en' => $r->course->department->name_en]
+                        ? [
+                            'id'      => $r->course->department->id,
+                            'name_en' => $r->course->department->name_en,
+                            'name_ar' => $r->course->department->name_ar,
+                        ]
                         : null,
                 ],
             ]),

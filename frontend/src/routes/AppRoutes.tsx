@@ -30,6 +30,7 @@ import { GradeItemGradesPage } from "@/pages/instructor/GradeItemGradesPage";
 import { SectionAnnouncementsPage } from "@/pages/instructor/SectionAnnouncementsPage";
 import { InstructorDiscussThreadsPage } from "@/pages/instructor/InstructorDiscussThreadsPage";
 import { InstructorDiscussThreadPage } from "@/pages/instructor/InstructorDiscussThreadPage";
+import { SectionAnalyticsPage } from "@/pages/instructor/SectionAnalyticsPage";
 
 import { FacultiesPage } from "@/pages/admin/FacultiesPage";
 import { DepartmentsPage } from "@/pages/admin/DepartmentsPage";
@@ -182,6 +183,11 @@ export function AppRoutes() {
                     <Route
                         path="/instructor/sections/:sectionId/discuss/threads/:threadId"
                         element={<InstructorDiscussThreadPage />}
+                    />
+
+                    <Route
+                        path="/instructor/sections/:sectionId/analytics"
+                        element={<SectionAnalyticsPage />}
                     />
                 </Route>
             </Route>

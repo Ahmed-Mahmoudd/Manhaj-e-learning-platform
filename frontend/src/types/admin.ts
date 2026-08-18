@@ -99,3 +99,40 @@ export interface PaginatedMeta {
     current_page: number;
     last_page: number;
 }
+
+export interface DepartmentAnalyticsItem {
+    id: number;
+    code: string;
+    name_en: string;
+    name_ar: string | null;
+    faculty: {
+        id: number;
+        name_en: string;
+        name_ar: string | null;
+    } | null;
+    programmes_count: number;
+    courses_count: number;
+    sections_count: number;
+    capacity: number;
+    enrolled_count: number;
+    fill_rate_pct: number;
+}
+
+export interface DepartmentAnalyticsResponse {
+    departments: DepartmentAnalyticsItem[];
+}
+
+export interface GradeAnalyticsResponse {
+    total_grades: number;
+    published_grade_items: number;
+    average_score_pct: number;
+    passing_rate_pct: number;
+    grade_distribution: {
+        A: number;
+        B: number;
+        C: number;
+        D: number;
+        F: number;
+    };
+}
+

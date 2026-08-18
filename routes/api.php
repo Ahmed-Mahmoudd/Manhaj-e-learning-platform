@@ -68,6 +68,7 @@ Route::prefix('v1')->group(function () {
 
             // Student dashboard
             Route::middleware('role:student')->prefix('student')->group(function () {
+                Route::get('dashboard/summary',                    [StudentDashboardController::class, 'summary']);
                 Route::get('courses',                              [StudentDashboardController::class, 'myCourses']);
                 Route::get('sections/{section}/lessons',           [StudentDashboardController::class, 'sectionLessons']);
                 Route::post('lessons/{lesson}/progress',           [StudentDashboardController::class, 'updateProgress']);
@@ -90,6 +91,8 @@ Route::prefix('v1')->group(function () {
                 ->group(function () {
                     Route::get('sections',                                    [InstructorDashboardController::class, 'mySections']);
                     Route::get('sections/{section}/enrolments',               [InstructorDashboardController::class, 'sectionEnrolments']);
+                    Route::get('sections/{section}/analytics',                [InstructorDashboardController::class, 'analytics']);
+                    Route::get('sections/{section}/progress',                 [InstructorDashboardController::class, 'studentProgress']);
                     // Grade items
                     Route::get('sections/{section}/grade-items',              [GradeController::class, 'index']);
                     Route::post('sections/{section}/grade-items',             [GradeController::class, 'store']);
@@ -127,8 +130,11 @@ Route::prefix('v1')->group(function () {
             Route::middleware('role:university_admin,faculty_admin')
                 ->prefix('admin')
                 ->group(function () {
-                    Route::get('dashboard', [AdminDashboardController::class, 'index']);
-                    Route::get('terms',     [TermController::class, 'index']);
+                    Route::get('dashboard',                 [AdminDashboardController::class, 'index']);
+                    Route::get('analytics/departments',     [AdminDashboardController::class, 'departments']);
+                    Route::get('analytics/grades',          [AdminDashboardController::class, 'grades']);
+                    Route::get('reports/export',            [AdminDashboardController::class, 'export']);
+                    Route::get('terms',                     [TermController::class, 'index']);
                 });
 
             // ── University Admin (institutional structure + terms) ────────────

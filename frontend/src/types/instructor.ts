@@ -111,3 +111,47 @@ export interface InstructorAnnouncement {
 export interface SectionAnnouncementsResponse {
   announcements: InstructorAnnouncement[];
 }
+
+export interface SectionAnalyticsResponse {
+  section_id: number;
+  section_number: string;
+  enrolled_count: number;
+  capacity: number;
+  waitlisted_count: number;
+  published_grade_items: number;
+  average_grade_pct: number | null;
+  grade_distribution: {
+    A: number;
+    B: number;
+    C: number;
+    D: number;
+    F: number;
+  };
+  average_completion_pct: number;
+}
+
+export interface StudentProgressMatrixItem {
+  student_id: number;
+  name: string;
+  email: string;
+  overall_pct: number;
+  lesson_progress: Record<
+    string,
+    {
+      progress_pct: number;
+      completed_at: string | null;
+      seconds_spent: number;
+    }
+  >;
+}
+
+export interface SectionProgressResponse {
+  section_id: number;
+  modules: {
+    id: number;
+    title: string;
+    lessons: { id: number; title: string; type: string }[];
+  }[];
+  students: StudentProgressMatrixItem[];
+}
+
